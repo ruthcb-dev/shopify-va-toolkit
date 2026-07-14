@@ -2,9 +2,9 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
 
-from shopify.scraper import get_products
+from shopify.product_fetcher import get_products
 from shopify.image_downloader import download_images
-from shopify.shopify_csv import generate_csv
+from shopify.csv_generator import generate_csv
 from shopify.validator import validate_csv
 
 
