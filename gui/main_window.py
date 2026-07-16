@@ -25,8 +25,6 @@ class MainWindow:
 
         self.root.minsize(1000, 650)
 
-        # ===== Application State =====
-
         self.selected_product = None
 
         self.controller = AppController()
@@ -36,7 +34,6 @@ class MainWindow:
         self.status_bar.set_status("Application started")
 
         self.log_panel.write("Shopify VA Toolkit started.")
-
         self.log_panel.write("Ready.")
 
     def create_layout(self):
@@ -48,9 +45,7 @@ class MainWindow:
             padding=10
         )
 
-        self.toolbar_frame.pack(
-            fill="x"
-        )
+        self.toolbar_frame.pack(fill="x")
 
         # ===== Main Content =====
 
@@ -94,18 +89,16 @@ class MainWindow:
             padx=(5, 0)
         )
 
-        # ===== Activity Log =====
+        # ===== Log =====
 
         self.log_frame = ttk.Frame(
             self.root,
             padding=10
         )
 
-        self.log_frame.pack(
-            fill="both"
-        )
+        self.log_frame.pack(fill="both")
 
-        # ===== Status Bar =====
+        # ===== Status =====
 
         self.status_frame = ttk.Frame(
             self.root,
@@ -113,9 +106,7 @@ class MainWindow:
             padding=5
         )
 
-        self.status_frame.pack(
-            fill="x"
-        )
+        self.status_frame.pack(fill="x")
 
         # ===== Components =====
 
@@ -145,6 +136,17 @@ class MainWindow:
             self.status_frame
         )
 
+        # ===== Search =====
+
+        self.product_panel.search_button.config(
+            command=self.on_search_products
+        )
+
+        self.product_panel.search_entry.bind(
+            "<Return>",
+            lambda event: self.on_search_products()
+        )
+
     def run(self):
 
         self.root.mainloop()
@@ -155,13 +157,9 @@ class MainWindow:
 
     def on_fetch_products(self):
 
-        self.status_bar.set_status(
-            "Fetching products..."
-        )
+        self.status_bar.set_status("Fetching products...")
 
-        self.log_panel.write(
-            "Connecting to Shopify..."
-        )
+        self.log_panel.write("Connecting to Shopify...")
 
         self.details_panel.clear()
 
@@ -169,9 +167,7 @@ class MainWindow:
 
             products = self.controller.fetch_products()
 
-            self.product_panel.load_products(
-                products
-            )
+            self.product_panel.load_products(products)
 
             self.log_panel.write(
                 f"Loaded {len(products)} products."
@@ -183,56 +179,58 @@ class MainWindow:
 
         except Exception as e:
 
-            self.log_panel.write(
-                f"ERROR: {e}"
-            )
+            self.log_panel.write(f"ERROR: {e}")
 
-            self.status_bar.set_status(
-                "Error"
-            )
+            self.status_bar.set_status("Error")
+
+    def on_search_products(self):
+
+        search_text = self.product_panel.search_var.get()
+
+        filtered_products = self.controller.search_products(
+            search_text
+        )
+
+        self.product_panel.load_products(
+            filtered_products
+        )
+
+        self.log_panel.write(
+            f"Search returned {len(filtered_products)} product(s)."
+        )
+
+        self.status_bar.set_status(
+            f"{len(filtered_products)} product(s)"
+        )
 
     def on_download_images(self):
 
-        self.log_panel.write(
-            "Download Images clicked."
-        )
+        self.log_panel.write("Download Images clicked.")
 
-        self.status_bar.set_status(
-            "Downloading images..."
-        )
+        self.status_bar.set_status("Downloading images...")
 
     def on_generate_csv(self):
 
-        self.log_panel.write(
-            "Generate CSV clicked."
-        )
+        self.log_panel.write("Generate CSV clicked.")
 
-        self.status_bar.set_status(
-            "Generating CSV..."
-        )
+        self.status_bar.set_status("Generating CSV...")
 
     def on_validate_csv(self):
 
-        self.log_panel.write(
-            "Validate CSV clicked."
-        )
+        self.log_panel.write("Validate CSV clicked.")
 
-        self.status_bar.set_status(
-            "Validating CSV..."
-        )
+        self.status_bar.set_status("Validating CSV...")
 
     def on_export_selected(self):
 
-        self.log_panel.write(
-            "Export Selected clicked."
-        )
+        self.log_panel.write("Export Selected clicked.")
 
         self.status_bar.set_status(
             "Exporting selected products..."
         )
 
     # ==========================================================
-    # Product Callbacks
+    # Product Callback
     # ==========================================================
 
     def on_product_selected(self, product):
