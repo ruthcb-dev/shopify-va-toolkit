@@ -1,43 +1,129 @@
 import os
-import requests
 from urllib.parse import urlparse
+
+import requests
+
 from config import HEADERS
 
 
 def clean_filename(name):
-    """Remove characters that Windows doesn't allow in file names."""
-    return "".join(c for c in name if c.isalnum() or c in (" ", "-", "_")).strip()
+    """
+    Removes characters that Windows does not allow
+    in filenames.
+    """
+
+    return "".join(
+        c for c in name
+        if c.isalnum() or c in (" ", "-", "_")
+    ).strip()
 
 
-def download_images(products):
+def download_images(products, logger=None):
+    """
+    Downloads product images.
+
+    Parameters
+    ----------
+    products : list
+        Shopify product list.
+
+    logger : callable, optional
+        Function used for logging progress.
+
+        Example:
+            logger("Downloading image...")
+    """
+
     os.makedirs("images", exist_ok=True)
 
-    for product in products:
+    downloaded = 0
+    skipped = 0
 
-        product_name = clean_filename(product["title"])
+    total_products = len(products)
 
-        product_folder = os.path.join("images", product_name)
+    for product_index, product in enumerate(products, start=1):
 
-        os.makedirs(product_folder, exist_ok=True)
+        product_name = clean_filename(
+            product.get("title", "Unknown Product")
+        )
 
-        print(f"\nDownloading images for: {product_name}")
+        product_folder = os.path.join(
+            "images",
+            product_name
+        )
 
-        for image in product["images"]:
+        os.makedirs(
+            product_folder,
+            exist_ok=True
+        )
 
-            image_url = image["src"]
+        if logger:
+            logger(
+                f"[{product_index}/{total_products}] {product_name}"
+            )
 
-            filename = os.path.basename(urlparse(image_url).path)
+        for image in product.get("images", []):
 
-            filepath = os.path.join(product_folder, filename)
+            image_url = image.get("src")
 
-            # Skip if already downloaded
-            if os.path.exists(filepath):
-                print(f"   ✓ Already exists: {filename}")
+            if not image_url:
                 continue
 
-            response = requests.get(image_url, headers=HEADERS)
+            filename = os.path.basename(
+                urlparse(image_url).path
+            )
 
-            with open(filepath, "wb") as f:
-                f.write(response.content)
+            filepath = os.path.join(
+                product_folder,
+                filename
+            )
 
-            print(f"   ✓ Downloaded: {filename}")
+            if os.path.exists(filepath):
+
+                skipped += 1
+
+                if logger:
+                    logger(
+                        f"   ✓ Already exists: {filename}"
+                    )
+
+                continue
+
+            response = requests.get(
+                image_url,
+                headers=HEADERS,
+                timeout=30
+            )
+
+            response.raise_for_status()
+
+            with open(filepath, "wb") as file:
+
+                file.write(response.content)
+
+            downloaded += 1
+
+            if logger:
+                logger(
+                    f"   ✓ Downloaded: {filename}"
+                )
+
+    if logger:
+
+        logger("")
+
+        logger("Image download completed.")
+
+        logger(
+            f"Downloaded : {downloaded}"
+        )
+
+        logger(
+            f"Skipped     : {skipped}"
+        )
+
+    return {
+        "downloaded": downloaded,
+        "skipped": skipped,
+        "products": total_products
+    }

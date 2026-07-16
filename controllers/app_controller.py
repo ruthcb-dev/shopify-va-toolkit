@@ -10,7 +10,6 @@ class AppController:
 
     def __init__(self):
 
-        # Complete product list fetched from Shopify
         self.products = []
 
     # ==========================================================
@@ -19,8 +18,7 @@ class AppController:
 
     def fetch_products(self):
         """
-        Retrieves all products from Shopify and stores
-        them in memory.
+        Retrieves all Shopify products.
         """
 
         self.products = get_products()
@@ -28,17 +26,13 @@ class AppController:
         return self.products
 
     # ==========================================================
-    # Search
+    # Product Search
     # ==========================================================
 
     def search_products(self, search_text):
         """
-        Searches products by:
-        - Title
-        - Vendor
-        - Product Type
-        - SKU
-        - Tags
+        Searches products by title, vendor,
+        product type, SKU and tags.
         """
 
         search_text = search_text.strip().lower()
@@ -67,20 +61,25 @@ class AppController:
         return filtered
 
     # ==========================================================
-    # Images
+    # Image Download
     # ==========================================================
 
-    def download_product_images(self, products=None):
+    def download_product_images(
+        self,
+        logger=None,
+        products=None
+    ):
         """
         Downloads images for the supplied products.
 
-        If no product list is supplied, downloads images
-        for every loaded product.
+        If products is None,
+        downloads images for every loaded product.
         """
 
         if products is None:
             products = self.products
 
-        download_images(products)
-
-        return len(products)
+        return download_images(
+            products,
+            logger=logger
+        )

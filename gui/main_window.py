@@ -36,9 +36,13 @@ class MainWindow:
         self.log_panel.write("Shopify VA Toolkit started.")
         self.log_panel.write("Ready.")
 
+    # ==========================================================
+    # Layout
+    # ==========================================================
+
     def create_layout(self):
 
-        # ===== Toolbar =====
+        # ----- Toolbar -----
 
         self.toolbar_frame = ttk.Frame(
             self.root,
@@ -47,7 +51,7 @@ class MainWindow:
 
         self.toolbar_frame.pack(fill="x")
 
-        # ===== Main Content =====
+        # ----- Main Content -----
 
         self.content_frame = ttk.Frame(
             self.root,
@@ -59,7 +63,7 @@ class MainWindow:
             expand=True
         )
 
-        # ===== Left Panel =====
+        # Left
 
         self.left_panel = ttk.Frame(
             self.content_frame,
@@ -74,7 +78,7 @@ class MainWindow:
             padx=(0, 5)
         )
 
-        # ===== Right Panel =====
+        # Right
 
         self.right_panel = ttk.Frame(
             self.content_frame,
@@ -89,7 +93,7 @@ class MainWindow:
             padx=(5, 0)
         )
 
-        # ===== Log =====
+        # ----- Log -----
 
         self.log_frame = ttk.Frame(
             self.root,
@@ -98,7 +102,7 @@ class MainWindow:
 
         self.log_frame.pack(fill="both")
 
-        # ===== Status =====
+        # ----- Status -----
 
         self.status_frame = ttk.Frame(
             self.root,
@@ -108,7 +112,9 @@ class MainWindow:
 
         self.status_frame.pack(fill="x")
 
-        # ===== Components =====
+        # ======================================================
+        # Components
+        # ======================================================
 
         self.toolbar = Toolbar(
             parent=self.toolbar_frame,
@@ -136,16 +142,9 @@ class MainWindow:
             self.status_frame
         )
 
-        # ===== Search =====
-
-        self.product_panel.search_button.config(
-            command=self.on_search_products
-        )
-
-        self.product_panel.search_entry.bind(
-            "<Return>",
-            lambda event: self.on_search_products()
-        )
+    # ==========================================================
+    # Run
+    # ==========================================================
 
     def run(self):
 
@@ -157,9 +156,13 @@ class MainWindow:
 
     def on_fetch_products(self):
 
-        self.status_bar.set_status("Fetching products...")
+        self.status_bar.set_status(
+            "Fetching products..."
+        )
 
-        self.log_panel.write("Connecting to Shopify...")
+        self.log_panel.write(
+            "Connecting to Shopify..."
+        )
 
         self.details_panel.clear()
 
@@ -179,54 +182,50 @@ class MainWindow:
 
         except Exception as e:
 
-            self.log_panel.write(f"ERROR: {e}")
+            self.log_panel.write(
+                f"ERROR: {e}"
+            )
 
-            self.status_bar.set_status("Error")
-
-    def on_search_products(self):
-
-        search_text = self.product_panel.search_var.get()
-
-        filtered_products = self.controller.search_products(
-            search_text
-        )
-
-        self.product_panel.load_products(
-            filtered_products
-        )
-
-        self.log_panel.write(
-            f"Search returned {len(filtered_products)} product(s)."
-        )
-
-        self.status_bar.set_status(
-            f"{len(filtered_products)} product(s)"
-        )
+            self.status_bar.set_status(
+                "Error"
+            )
 
     def on_download_images(self):
 
         self.status_bar.set_status(
-            "Downloading images..."
-        )
-
-        self.log_panel.write(
             "Downloading product images..."
         )
 
+        self.log_panel.write("")
+        self.log_panel.write("Starting image download...")
+
         try:
 
-            count = self.controller.download_product_images()
+            result = self.controller.download_product_images(
+                logger=self.log_panel.write
+            )
 
+            self.log_panel.write("")
+            self.log_panel.write("Download Summary")
+            self.log_panel.write("-----------------------------")
             self.log_panel.write(
-                f"Downloaded images for {count} products."
+                f"Products   : {result['products']}"
+            )
+            self.log_panel.write(
+                f"Downloaded : {result['downloaded']}"
+            )
+            self.log_panel.write(
+                f"Skipped    : {result['skipped']}"
             )
 
             self.status_bar.set_status(
-                "Image download completed"
+                f"Downloaded {result['downloaded']} images • "
+                f"Skipped {result['skipped']}"
             )
 
         except Exception as e:
 
+            self.log_panel.write("")
             self.log_panel.write(
                 f"ERROR: {e}"
             )
@@ -237,26 +236,36 @@ class MainWindow:
 
     def on_generate_csv(self):
 
-        self.log_panel.write("Generate CSV clicked.")
+        self.log_panel.write(
+            "Generate CSV clicked."
+        )
 
-        self.status_bar.set_status("Generating CSV...")
+        self.status_bar.set_status(
+            "Generating CSV..."
+        )
 
     def on_validate_csv(self):
 
-        self.log_panel.write("Validate CSV clicked.")
+        self.log_panel.write(
+            "Validate CSV clicked."
+        )
 
-        self.status_bar.set_status("Validating CSV...")
+        self.status_bar.set_status(
+            "Validating CSV..."
+        )
 
     def on_export_selected(self):
 
-        self.log_panel.write("Export Selected clicked.")
+        self.log_panel.write(
+            "Export Selected clicked."
+        )
 
         self.status_bar.set_status(
             "Exporting selected products..."
         )
 
     # ==========================================================
-    # Product Callback
+    # Product Callbacks
     # ==========================================================
 
     def on_product_selected(self, product):

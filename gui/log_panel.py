@@ -64,6 +64,8 @@ class LogPanel:
 
     def write(self, message):
 
+        print("LOG:", message)
+
         self.log.configure(state="normal")
 
         self.log.insert(
