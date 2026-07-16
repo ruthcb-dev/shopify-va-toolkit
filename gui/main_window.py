@@ -205,9 +205,35 @@ class MainWindow:
 
     def on_download_images(self):
 
-        self.log_panel.write("Download Images clicked.")
+        self.status_bar.set_status(
+            "Downloading images..."
+        )
 
-        self.status_bar.set_status("Downloading images...")
+        self.log_panel.write(
+            "Downloading product images..."
+        )
+
+        try:
+
+            count = self.controller.download_product_images()
+
+            self.log_panel.write(
+                f"Downloaded images for {count} products."
+            )
+
+            self.status_bar.set_status(
+                "Image download completed"
+            )
+
+        except Exception as e:
+
+            self.log_panel.write(
+                f"ERROR: {e}"
+            )
+
+            self.status_bar.set_status(
+                "Image download failed"
+            )
 
     def on_generate_csv(self):
 

@@ -1,4 +1,5 @@
 from shopify.product_fetcher import get_products
+from shopify.image_downloader import download_images
 
 
 class AppController:
@@ -33,7 +34,6 @@ class AppController:
     def search_products(self, search_text):
         """
         Searches products by:
-
         - Title
         - Vendor
         - Product Type
@@ -43,7 +43,6 @@ class AppController:
 
         search_text = search_text.strip().lower()
 
-        # Empty search returns all products
         if not search_text:
             return self.products
 
@@ -66,3 +65,22 @@ class AppController:
                 filtered.append(product)
 
         return filtered
+
+    # ==========================================================
+    # Images
+    # ==========================================================
+
+    def download_product_images(self, products=None):
+        """
+        Downloads images for the supplied products.
+
+        If no product list is supplied, downloads images
+        for every loaded product.
+        """
+
+        if products is None:
+            products = self.products
+
+        download_images(products)
+
+        return len(products)
