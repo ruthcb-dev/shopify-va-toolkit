@@ -1,16 +1,13 @@
-from shopify.product_fetcher import get_products
-from shopify.image_downloader import download_images
-from shopify.csv_generator import generate_csv
-from shopify.validator import validate_csv
+from gui.main_window import MainWindow
 
-products = get_products()
 
-print(f"Found {len(products)} products.")
+def main():
 
-download_images(products)
+    app = MainWindow()
 
-generate_csv(products)
+    app.run()
 
-validate_csv("output/shopify_import.csv")
 
-print("\nEverything completed successfully!")
+if __name__ == "__main__":
+
+    main()
