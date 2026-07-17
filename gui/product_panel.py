@@ -219,15 +219,4 @@ class ProductPanel:
                 )
             )
 
-        # Automatically select the first product
-        if self.tree.get_children():
-
-            first_item = self.tree.get_children()[0]
-
-            self.tree.selection_set(first_item)
-
-            self.tree.focus(first_item)
-
-            self.tree.see(first_item)
-
-            self.on_select(None)
+       

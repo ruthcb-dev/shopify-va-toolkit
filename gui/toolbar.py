@@ -96,3 +96,16 @@ class Toolbar:
             padx=5,
             pady=5
         )
+
+    def set_enabled(self, enabled=True):
+        """
+        Enable or disable all toolbar buttons.
+        """
+
+        state = "normal" if enabled else "disabled"
+
+        self.fetch_button.config(state=state)
+        self.download_button.config(state=state)
+        self.csv_button.config(state=state)
+        self.validate_button.config(state=state)
+        self.export_button.config(state=state)
