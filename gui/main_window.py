@@ -25,6 +25,7 @@ class MainWindow:
         self.root.minsize(1000, 650)
 
         # Root Grid
+
         self.root.grid_rowconfigure(0, weight=0)
         self.root.grid_rowconfigure(1, weight=1)
         self.root.grid_rowconfigure(2, weight=0)
@@ -32,6 +33,7 @@ class MainWindow:
         self.root.grid_columnconfigure(0, weight=1)
 
         self.selected_product = None
+
         self.controller = AppController()
 
         self.create_layout()
@@ -47,46 +49,19 @@ class MainWindow:
         # Toolbar
         # ==========================================================
 
-        self.toolbar_frame = ttk.Frame(
-            self.root,
-            padding=10
-        )
-
-        self.toolbar_frame.grid(
-            row=0,
-            column=0,
-            sticky="ew"
-        )
+        self.toolbar_frame = ttk.Frame(self.root, padding=10)
+        self.toolbar_frame.grid(row=0, column=0, sticky="ew")
 
         # ==========================================================
-        # Main Area
+        # Main Content
         # ==========================================================
 
-        self.content_frame = ttk.Frame(
-            self.root,
-            padding=10
-        )
+        self.content_frame = ttk.Frame(self.root, padding=10)
+        self.content_frame.grid(row=1, column=0, sticky="nsew")
 
-        self.content_frame.grid(
-            row=1,
-            column=0,
-            sticky="nsew"
-        )
-
-        self.content_frame.grid_rowconfigure(
-            0,
-            weight=1
-        )
-
-        self.content_frame.grid_columnconfigure(
-            0,
-            weight=1
-        )
-
-        self.content_frame.grid_columnconfigure(
-            1,
-            weight=1
-        )
+        self.content_frame.grid_rowconfigure(0, weight=1)
+        self.content_frame.grid_columnconfigure(0, weight=1)
+        self.content_frame.grid_columnconfigure(1, weight=1)
 
         self.left_panel = ttk.Frame(
             self.content_frame,
@@ -176,7 +151,6 @@ class MainWindow:
         )
 
     def run(self):
-
         self.root.mainloop()
 
     # ==========================================================
@@ -192,29 +166,10 @@ class MainWindow:
 
     def fetch_products_worker(self):
 
-        self.root.after(
-            0,
-            lambda: self.toolbar.set_enabled(False)
-        )
-
-        self.root.after(
-            0,
-            self.details_panel.clear
-        )
-
-        self.root.after(
-            0,
-            lambda: self.status_bar.set_status(
-                "Fetching products..."
-            )
-        )
-
-        self.root.after(
-            0,
-            lambda: self.log_panel.write(
-                "Connecting to Shopify..."
-            )
-        )
+        self.root.after(0, lambda: self.toolbar.set_enabled(False))
+        self.root.after(0, self.details_panel.clear)
+        self.root.after(0, lambda: self.status_bar.set_status("Fetching products..."))
+        self.root.after(0, lambda: self.log_panel.write("Connecting to Shopify..."))
 
         try:
 
@@ -243,16 +198,12 @@ class MainWindow:
 
             self.root.after(
                 0,
-                lambda: self.log_panel.write(
-                    f"ERROR: {e}"
-                )
+                lambda: self.log_panel.write(f"ERROR: {e}")
             )
 
             self.root.after(
                 0,
-                lambda: self.status_bar.set_status(
-                    "Error"
-                )
+                lambda: self.status_bar.set_status("Error")
             )
 
         finally:
@@ -275,48 +226,34 @@ class MainWindow:
 
     def download_images_worker(self):
 
-        self.root.after(
-            0,
-            lambda: self.toolbar.set_enabled(False)
-        )
-
-        self.root.after(
-            0,
-            lambda: self.status_bar.set_status(
-                "Downloading images..."
-            )
-        )
+        self.root.after(0, lambda: self.toolbar.set_enabled(False))
+        self.root.after(0, lambda: self.status_bar.set_status("Downloading images..."))
 
         try:
 
             self.controller.download_product_images(
-                logger=lambda message: self.root.after(
+                logger=lambda msg:
+                self.root.after(
                     0,
-                    lambda m=message: self.log_panel.write(m)
+                    lambda m=msg: self.log_panel.write(m)
                 )
             )
 
             self.root.after(
                 0,
-                lambda: self.status_bar.set_status(
-                    "Ready"
-                )
+                lambda: self.status_bar.set_status("Ready")
             )
 
         except Exception as e:
 
             self.root.after(
                 0,
-                lambda: self.log_panel.write(
-                    f"ERROR: {e}"
-                )
+                lambda: self.log_panel.write(f"ERROR: {e}")
             )
 
             self.root.after(
                 0,
-                lambda: self.status_bar.set_status(
-                    "Error"
-                )
+                lambda: self.status_bar.set_status("Error")
             )
 
         finally:
@@ -339,24 +276,16 @@ class MainWindow:
 
     def generate_csv_worker(self):
 
-        self.root.after(
-            0,
-            lambda: self.toolbar.set_enabled(False)
-        )
-
-        self.root.after(
-            0,
-            lambda: self.status_bar.set_status(
-                "Generating CSV..."
-            )
-        )
+        self.root.after(0, lambda: self.toolbar.set_enabled(False))
+        self.root.after(0, lambda: self.status_bar.set_status("Generating CSV..."))
 
         try:
 
             filename = self.controller.generate_csv(
-                logger=lambda message: self.root.after(
+                logger=lambda msg:
+                self.root.after(
                     0,
-                    lambda m=message: self.log_panel.write(m)
+                    lambda m=msg: self.log_panel.write(m)
                 )
             )
 
@@ -380,10 +309,71 @@ class MainWindow:
 
                 self.root.after(
                     0,
-                    lambda: self.log_panel.write(
-                        "CSV generation cancelled."
+                    lambda: self.status_bar.set_status("Ready")
+                )
+
+        except Exception as e:
+
+            self.root.after(
+                0,
+                lambda: self.log_panel.write(f"ERROR: {e}")
+            )
+
+            self.root.after(
+                0,
+                lambda: self.status_bar.set_status("Error")
+            )
+
+        finally:
+
+            self.root.after(
+                0,
+                lambda: self.toolbar.set_enabled(True)
+            )
+
+    # ==========================================================
+    # Validate CSV
+    # ==========================================================
+
+    def on_validate_csv(self):
+
+        threading.Thread(
+            target=self.validate_csv_worker,
+            daemon=True
+        ).start()
+
+    def validate_csv_worker(self):
+
+        self.root.after(
+            0,
+            lambda: self.toolbar.set_enabled(False)
+        )
+
+        self.root.after(
+            0,
+            lambda: self.status_bar.set_status("Validating CSV...")
+        )
+
+        try:
+
+            success = self.controller.validate_csv(
+                logger=lambda msg:
+                self.root.after(
+                    0,
+                    lambda m=msg: self.log_panel.write(m)
+                )
+            )
+
+            if success:
+
+                self.root.after(
+                    0,
+                    lambda: self.status_bar.set_status(
+                        "Validation completed"
                     )
                 )
+
+            else:
 
                 self.root.after(
                     0,
@@ -404,7 +394,7 @@ class MainWindow:
             self.root.after(
                 0,
                 lambda: self.status_bar.set_status(
-                    "Error"
+                    "Validation failed"
                 )
             )
 
@@ -416,18 +406,8 @@ class MainWindow:
             )
 
     # ==========================================================
-    # Remaining Buttons
+    # Export
     # ==========================================================
-
-    def on_validate_csv(self):
-
-        self.log_panel.write(
-            "Validate CSV clicked."
-        )
-
-        self.status_bar.set_status(
-            "Validating CSV..."
-        )
 
     def on_export_selected(self):
 
@@ -455,6 +435,4 @@ class MainWindow:
             "Product selected"
         )
 
-        self.details_panel.show_product(
-            product
-        )
+        self.details_panel.show_product(product)
