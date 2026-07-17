@@ -1,5 +1,6 @@
 from shopify.product_fetcher import get_products
 from shopify.image_downloader import download_images
+from shopify.csv_generator import generate_csv
 
 
 class AppController:
@@ -45,17 +46,25 @@ class AppController:
         for product in self.products:
 
             variants = product.get("variants", [])
+
             variant = variants[0] if variants else {}
 
             searchable = " ".join([
+
                 str(product.get("title", "")),
+
                 str(product.get("vendor", "")),
+
                 str(product.get("product_type", "")),
+
                 str(variant.get("sku", "")),
+
                 " ".join(product.get("tags", []))
+
             ]).lower()
 
             if search_text in searchable:
+
                 filtered.append(product)
 
         return filtered
@@ -77,9 +86,35 @@ class AppController:
         """
 
         if products is None:
+
             products = self.products
 
         return download_images(
+            products,
+            logger=logger
+        )
+
+    # ==========================================================
+    # CSV Generation
+    # ==========================================================
+
+    def generate_csv(
+        self,
+        logger=None,
+        products=None
+    ):
+        """
+        Generates a Shopify CSV.
+
+        If products is None,
+        exports all loaded products.
+        """
+
+        if products is None:
+
+            products = self.products
+
+        return generate_csv(
             products,
             logger=logger
         )

@@ -43,7 +43,9 @@ class MainWindow:
 
     def create_layout(self):
 
-        # ===== Toolbar =====
+        # ==========================================================
+        # Toolbar
+        # ==========================================================
 
         self.toolbar_frame = ttk.Frame(
             self.root,
@@ -56,7 +58,9 @@ class MainWindow:
             sticky="ew"
         )
 
-        # ===== Main Area =====
+        # ==========================================================
+        # Main Area
+        # ==========================================================
 
         self.content_frame = ttk.Frame(
             self.root,
@@ -84,8 +88,6 @@ class MainWindow:
             weight=1
         )
 
-        # ===== Left Panel =====
-
         self.left_panel = ttk.Frame(
             self.content_frame,
             relief="solid",
@@ -98,8 +100,6 @@ class MainWindow:
             sticky="nsew",
             padx=(0, 5)
         )
-
-        # ===== Right Panel =====
 
         self.right_panel = ttk.Frame(
             self.content_frame,
@@ -114,7 +114,9 @@ class MainWindow:
             padx=(5, 0)
         )
 
-        # ===== Activity Log =====
+        # ==========================================================
+        # Activity Log
+        # ==========================================================
 
         self.log_frame = ttk.Frame(
             self.root,
@@ -127,7 +129,9 @@ class MainWindow:
             sticky="ew"
         )
 
-        # ===== Status Bar =====
+        # ==========================================================
+        # Status Bar
+        # ==========================================================
 
         self.status_frame = ttk.Frame(
             self.root,
@@ -141,7 +145,9 @@ class MainWindow:
             sticky="ew"
         )
 
-        # ===== Components =====
+        # ==========================================================
+        # Components
+        # ==========================================================
 
         self.toolbar = Toolbar(
             parent=self.toolbar_frame,
@@ -321,18 +327,97 @@ class MainWindow:
             )
 
     # ==========================================================
-    # Remaining Buttons
+    # Generate CSV
     # ==========================================================
 
     def on_generate_csv(self):
 
-        self.log_panel.write(
-            "Generate CSV clicked."
+        threading.Thread(
+            target=self.generate_csv_worker,
+            daemon=True
+        ).start()
+
+    def generate_csv_worker(self):
+
+        self.root.after(
+            0,
+            lambda: self.toolbar.set_enabled(False)
         )
 
-        self.status_bar.set_status(
-            "Generating CSV..."
+        self.root.after(
+            0,
+            lambda: self.status_bar.set_status(
+                "Generating CSV..."
+            )
         )
+
+        try:
+
+            filename = self.controller.generate_csv(
+                logger=lambda message: self.root.after(
+                    0,
+                    lambda m=message: self.log_panel.write(m)
+                )
+            )
+
+            if filename:
+
+                self.root.after(
+                    0,
+                    lambda: self.log_panel.write(
+                        f"Saved to:\n{filename}"
+                    )
+                )
+
+                self.root.after(
+                    0,
+                    lambda: self.status_bar.set_status(
+                        "CSV generated"
+                    )
+                )
+
+            else:
+
+                self.root.after(
+                    0,
+                    lambda: self.log_panel.write(
+                        "CSV generation cancelled."
+                    )
+                )
+
+                self.root.after(
+                    0,
+                    lambda: self.status_bar.set_status(
+                        "Ready"
+                    )
+                )
+
+        except Exception as e:
+
+            self.root.after(
+                0,
+                lambda: self.log_panel.write(
+                    f"ERROR: {e}"
+                )
+            )
+
+            self.root.after(
+                0,
+                lambda: self.status_bar.set_status(
+                    "Error"
+                )
+            )
+
+        finally:
+
+            self.root.after(
+                0,
+                lambda: self.toolbar.set_enabled(True)
+            )
+
+    # ==========================================================
+    # Remaining Buttons
+    # ==========================================================
 
     def on_validate_csv(self):
 

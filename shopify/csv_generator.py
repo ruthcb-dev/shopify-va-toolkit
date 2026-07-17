@@ -1,21 +1,52 @@
-import os
 import re
 import pandas as pd
+from tkinter import filedialog
 
 
 def create_handle(title):
-    """Convert product title into a Shopify handle."""
+    """
+    Convert product title into a Shopify handle.
+    """
+
     handle = title.lower()
     handle = re.sub(r"[^a-z0-9]+", "-", handle)
+
     return handle.strip("-")
 
 
 def get_option_value(variant, index):
-    """Safely return option1, option2 or option3."""
+    """
+    Safely return option1, option2 or option3.
+    """
+
     return variant.get(f"option{index}", "")
 
 
-def generate_csv(products):
+def generate_csv(products, logger=None):
+    """
+    Generates a Shopify-compatible CSV file.
+
+    Returns:
+        Full path of the saved CSV.
+    """
+
+    if not products:
+        raise ValueError("No products loaded.")
+
+    filename = filedialog.asksaveasfilename(
+        title="Save Shopify CSV",
+        defaultextension=".csv",
+        filetypes=[
+            ("CSV Files", "*.csv")
+        ],
+        initialfile="shopify_import.csv"
+    )
+
+    if not filename:
+        return None
+
+    if logger:
+        logger("Generating Shopify CSV...")
 
     rows = []
 
@@ -27,10 +58,10 @@ def generate_csv(products):
         images = product.get("images", [])
         options = product.get("options", [])
 
-        # Get option names (Color, Size, Material, etc.)
         option_names = ["", "", ""]
 
         for i, option in enumerate(options):
+
             if i < 3:
                 option_names[i] = option["name"]
 
@@ -39,6 +70,7 @@ def generate_csv(products):
         for variant in variants:
 
             row = {
+
                 "Handle": handle,
 
                 "Title": product["title"] if first_variant else "",
@@ -70,7 +102,10 @@ def generate_csv(products):
 
                 "Variant Inventory Tracker": "shopify",
 
-                "Variant Inventory Qty": variant.get("inventory_quantity", 0),
+                "Variant Inventory Qty": variant.get(
+                    "inventory_quantity",
+                    0
+                ),
 
                 "Variant Inventory Policy": "deny",
 
@@ -78,7 +113,10 @@ def generate_csv(products):
 
                 "Variant Price": variant.get("price", ""),
 
-                "Variant Compare At Price": variant.get("compare_at_price", ""),
+                "Variant Compare At Price": variant.get(
+                    "compare_at_price",
+                    ""
+                ),
 
                 "Variant Requires Shipping": "TRUE",
 
@@ -86,9 +124,17 @@ def generate_csv(products):
 
                 "Variant Barcode": variant.get("barcode", ""),
 
-                "Image Src": images[0]["src"] if first_variant and images else "",
+                "Image Src": (
+                    images[0]["src"]
+                    if first_variant and images
+                    else ""
+                ),
 
-                "Image Position": 1 if first_variant and images else "",
+                "Image Position": (
+                    1
+                    if first_variant and images
+                    else ""
+                ),
 
                 "Gift Card": "FALSE",
 
@@ -115,25 +161,30 @@ def generate_csv(products):
 
             first_variant = False
 
-        # Additional images
         if len(images) > 1:
 
             for position, image in enumerate(images[1:], start=2):
 
                 rows.append({
-                    "Handle": handle,
-                    "Image Src": image["src"],
-                    "Image Position": position
-                })
 
-    os.makedirs("output", exist_ok=True)
+                    "Handle": handle,
+
+                    "Image Src": image["src"],
+
+                    "Image Position": position
+
+                })
 
     df = pd.DataFrame(rows)
 
     df.to_csv(
-        "output/shopify_import.csv",
+        filename,
         index=False,
         encoding="utf-8-sig"
     )
 
-    print("\n✅ Shopify import CSV created successfully!")
+    if logger:
+        logger("CSV generated successfully.")
+        logger(filename)
+
+    return filename
