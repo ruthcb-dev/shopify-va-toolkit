@@ -167,6 +167,7 @@ class MainWindow:
     def fetch_products_worker(self):
 
         self.root.after(0, lambda: self.toolbar.set_enabled(False))
+        self.root.after(0, self.toolbar.start_progress)
         self.root.after(0, self.details_panel.clear)
         self.root.after(0, lambda: self.status_bar.set_status("Fetching products..."))
         self.root.after(0, lambda: self.log_panel.write("Connecting to Shopify..."))
@@ -210,6 +211,11 @@ class MainWindow:
 
             self.root.after(
                 0,
+                self.toolbar.stop_progress
+            )
+
+            self.root.after(
+                0,
                 lambda: self.toolbar.set_enabled(True)
             )
 
@@ -227,6 +233,7 @@ class MainWindow:
     def download_images_worker(self):
 
         self.root.after(0, lambda: self.toolbar.set_enabled(False))
+        self.root.after(0, self.toolbar.start_progress)
         self.root.after(0, lambda: self.status_bar.set_status("Downloading images..."))
 
         try:
@@ -260,6 +267,11 @@ class MainWindow:
 
             self.root.after(
                 0,
+                self.toolbar.stop_progress
+            )
+
+            self.root.after(
+                0,
                 lambda: self.toolbar.set_enabled(True)
             )
 
@@ -277,6 +289,7 @@ class MainWindow:
     def generate_csv_worker(self):
 
         self.root.after(0, lambda: self.toolbar.set_enabled(False))
+        self.root.after(0, self.toolbar.start_progress)
         self.root.after(0, lambda: self.status_bar.set_status("Generating CSV..."))
 
         try:
@@ -328,6 +341,11 @@ class MainWindow:
 
             self.root.after(
                 0,
+                self.toolbar.stop_progress
+            )
+
+            self.root.after(
+                0,
                 lambda: self.toolbar.set_enabled(True)
             )
 
@@ -347,6 +365,11 @@ class MainWindow:
         self.root.after(
             0,
             lambda: self.toolbar.set_enabled(False)
+        )
+
+        self.root.after(
+            0,
+            self.toolbar.start_progress
         )
 
         self.root.after(
@@ -402,11 +425,15 @@ class MainWindow:
 
             self.root.after(
                 0,
+                self.toolbar.stop_progress
+            )
+
+            self.root.after(
+                0,
                 lambda: self.toolbar.set_enabled(True)
             )
 
-    # Replace ONLY these two methods in your existing MainWindow class.
-
+    
     # ==========================================================
     # Export Selected
     # ==========================================================
@@ -424,6 +451,11 @@ class MainWindow:
         self.root.after(
             0,
             lambda: self.toolbar.set_enabled(False)
+        )
+
+        self.root.after(
+            0,
+            self.toolbar.start_progress
         )
 
         self.root.after(
@@ -496,6 +528,11 @@ class MainWindow:
             )
 
         finally:
+
+            self.root.after(
+                0,
+                self.toolbar.stop_progress
+            )
 
             self.root.after(
                 0,

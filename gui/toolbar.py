@@ -97,10 +97,27 @@ class Toolbar:
             pady=5
         )
 
+        # ======================================================
+        # Progress Bar
+        # ======================================================
+
+        self.progress = ttk.Progressbar(
+            self.frame,
+            mode="indeterminate",
+            length=220
+        )
+
+        self.progress.pack(
+            side="right",
+            padx=10,
+            pady=5
+        )
+
+    # ======================================================
+    # Toolbar State
+    # ======================================================
+
     def set_enabled(self, enabled=True):
-        """
-        Enable or disable all toolbar buttons.
-        """
 
         state = "normal" if enabled else "disabled"
 
@@ -109,3 +126,15 @@ class Toolbar:
         self.csv_button.config(state=state)
         self.validate_button.config(state=state)
         self.export_button.config(state=state)
+
+    # ======================================================
+    # Progress Bar
+    # ======================================================
+
+    def start_progress(self):
+
+        self.progress.start(12)
+
+    def stop_progress(self):
+
+        self.progress.stop()
