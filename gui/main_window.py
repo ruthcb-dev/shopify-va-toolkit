@@ -5,6 +5,7 @@ import threading
 from controllers.app_controller import AppController
 
 from gui.menu_bar import MenuBar
+from gui.settings_dialog import SettingsDialog
 from gui.toolbar import Toolbar
 from gui.product_panel import ProductPanel
 from gui.details_panel import DetailsPanel
@@ -35,15 +36,39 @@ class MainWindow:
 
         self.selected_product = None
 
+        # Settings are stored only during the current session.
+        # Permanent storage will be added in Phase 7.4.
+
+        self.settings = {
+            "store_url": "",
+            "output_folder": "output",
+            "image_folder": "images",
+            "csv_encoding": "utf-8-sig",
+            "open_output_after_export": False,
+            "confirm_exit": True
+        }
+
         self.controller = AppController()
 
         self.create_layout()
         self.create_menu_bar()
 
-        self.status_bar.set_status("Application started")
+        self.root.protocol(
+            "WM_DELETE_WINDOW",
+            self.on_exit
+        )
 
-        self.log_panel.write("Shopify VA Toolkit started.")
-        self.log_panel.write("Ready.")
+        self.status_bar.set_status(
+            "Application started"
+        )
+
+        self.log_panel.write(
+            "Shopify VA Toolkit started."
+        )
+
+        self.log_panel.write(
+            "Ready."
+        )
 
     # ==========================================================
     # Layout
@@ -196,7 +221,9 @@ class MainWindow:
             on_generate_csv=self.on_generate_csv,
             on_validate=self.on_validate_csv,
             on_export=self.on_export_selected,
-            on_about=self.show_about
+            on_settings=self.show_settings,
+            on_about=self.show_about,
+            on_exit=self.on_exit
         )
 
     # ==========================================================
@@ -208,6 +235,60 @@ class MainWindow:
         self.root.mainloop()
 
     # ==========================================================
+    # Settings Dialog
+    # ==========================================================
+
+    def show_settings(self):
+
+        SettingsDialog(
+            parent=self.root,
+            settings=self.settings.copy(),
+            on_save=self.apply_settings
+        )
+
+    def apply_settings(self, updated_settings):
+
+        self.settings.update(
+            updated_settings
+        )
+
+        self.log_panel.write(
+            "Application settings updated."
+        )
+
+        self.status_bar.set_status(
+            "Settings updated"
+        )
+
+    # ==========================================================
+    # Exit Application
+    # ==========================================================
+
+    def on_exit(self):
+
+        confirm_exit = self.settings.get(
+            "confirm_exit",
+            True
+        )
+
+        if confirm_exit:
+
+            should_exit = messagebox.askyesno(
+                title="Exit Application",
+                message=(
+                    "Are you sure you want to exit "
+                    "Shopify VA Toolkit?"
+                ),
+                parent=self.root
+            )
+
+            if not should_exit:
+
+                return
+
+        self.root.destroy()
+
+    # ==========================================================
     # About Dialog
     # ==========================================================
 
@@ -217,13 +298,15 @@ class MainWindow:
             title="About Shopify VA Toolkit",
             message=(
                 "Shopify VA Toolkit v2.0\n\n"
-                "A desktop productivity tool for Shopify virtual assistants.\n\n"
+                "A desktop productivity tool for "
+                "Shopify virtual assistants.\n\n"
                 "Features:\n"
                 "• Fetch Shopify products\n"
                 "• Download product images\n"
                 "• Generate Shopify-compatible CSV files\n"
                 "• Validate CSV files\n"
-                "• Export selected products\n\n"
+                "• Export selected products\n"
+                "• Application settings\n\n"
                 "Built with Python and Tkinter."
             ),
             parent=self.root
@@ -326,7 +409,6 @@ class MainWindow:
                 0,
                 lambda: self.toolbar.set_enabled(True)
             )
-
     # ==========================================================
     # Download Images
     # ==========================================================
@@ -466,6 +548,16 @@ class MainWindow:
                         "CSV generated"
                     )
                 )
+
+                if self.settings.get(
+                    "open_output_after_export",
+                    False
+                ):
+
+                    self.log_panel.write(
+                        "Open output folder feature "
+                        "will be implemented in Phase 7.4."
+                    )
 
             else:
 
@@ -630,7 +722,9 @@ class MainWindow:
 
         try:
 
-            selected_products = self.product_panel.get_selected_products()
+            selected_products = (
+                self.product_panel.get_selected_products()
+            )
 
             if not selected_products:
 
@@ -638,14 +732,16 @@ class MainWindow:
                     "Please select one or more products first."
                 )
 
-            filename = self.controller.export_selected_products(
-                selected_products,
-                logger=lambda message:
-                self.root.after(
-                    0,
-                    lambda log_message=message:
-                    self.log_panel.write(
-                        log_message
+            filename = (
+                self.controller.export_selected_products(
+                    selected_products,
+                    logger=lambda message:
+                    self.root.after(
+                        0,
+                        lambda log_message=message:
+                        self.log_panel.write(
+                            log_message
+                        )
                     )
                 )
             )
@@ -665,6 +761,19 @@ class MainWindow:
                         "Export completed"
                     )
                 )
+
+                if self.settings.get(
+                    "open_output_after_export",
+                    False
+                ):
+
+                    self.root.after(
+                        0,
+                        lambda: self.log_panel.write(
+                            "Open output folder feature "
+                            "will be implemented in Phase 7.4."
+                        )
+                    )
 
             else:
 
@@ -722,4 +831,6 @@ class MainWindow:
             "Product selected"
         )
 
-        self.details_panel.show_product(product)            
+        self.details_panel.show_product(
+            product
+        )

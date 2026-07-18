@@ -14,28 +14,32 @@ class MenuBar:
         on_generate_csv=None,
         on_validate=None,
         on_export=None,
-        on_about=None
+        on_settings=None,
+        on_about=None,
+        on_exit=None
     ):
 
         self.root = root
+        self.on_exit = on_exit or self.root.destroy
 
-        self.menu = tk.Menu(root)
+        self.menu = tk.Menu(self.root)
 
-        root.config(menu=self.menu)
+        self.root.config(menu=self.menu)
 
         self.create_file_menu(
-            on_fetch,
-            on_generate_csv,
-            on_export
+            on_fetch=on_fetch,
+            on_generate_csv=on_generate_csv,
+            on_export=on_export,
+            on_settings=on_settings
         )
 
         self.create_tools_menu(
-            on_download,
-            on_validate
+            on_download=on_download,
+            on_validate=on_validate
         )
 
         self.create_help_menu(
-            on_about
+            on_about=on_about
         )
 
     # ==========================================================
@@ -46,7 +50,8 @@ class MenuBar:
         self,
         on_fetch,
         on_generate_csv,
-        on_export
+        on_export,
+        on_settings
     ):
 
         file_menu = tk.Menu(
@@ -74,8 +79,15 @@ class MenuBar:
         file_menu.add_separator()
 
         file_menu.add_command(
+            label="Settings",
+            command=on_settings
+        )
+
+        file_menu.add_separator()
+
+        file_menu.add_command(
             label="Exit",
-            command=self.root.destroy
+            command=self.on_exit
         )
 
         self.menu.add_cascade(
