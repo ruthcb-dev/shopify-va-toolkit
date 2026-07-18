@@ -405,19 +405,102 @@ class MainWindow:
                 lambda: self.toolbar.set_enabled(True)
             )
 
+    # Replace ONLY these two methods in your existing MainWindow class.
+
     # ==========================================================
-    # Export
+    # Export Selected
     # ==========================================================
 
     def on_export_selected(self):
 
-        self.log_panel.write(
-            "Export Selected clicked."
+        threading.Thread(
+            target=self.export_selected_worker,
+            daemon=True
+        ).start()
+
+
+    def export_selected_worker(self):
+
+        self.root.after(
+            0,
+            lambda: self.toolbar.set_enabled(False)
         )
 
-        self.status_bar.set_status(
-            "Exporting selected products..."
+        self.root.after(
+            0,
+            lambda: self.status_bar.set_status(
+                "Exporting selected products..."
+            )
         )
+
+        try:
+
+            selected_products = self.product_panel.get_selected_products()
+
+            if not selected_products:
+
+                raise ValueError(
+                    "Please select one or more products first."
+                )
+
+            filename = self.controller.export_selected_products(
+
+                selected_products,
+
+                logger=lambda msg:
+                self.root.after(
+                    0,
+                    lambda m=msg: self.log_panel.write(m)
+                )
+            )
+
+            if filename:
+
+                self.root.after(
+                    0,
+                    lambda: self.log_panel.write(
+                        f"Export completed.\n{filename}"
+                    )
+                )
+
+                self.root.after(
+                    0,
+                    lambda: self.status_bar.set_status(
+                        "Export completed"
+                    )
+                )
+
+            else:
+
+                self.root.after(
+                    0,
+                    lambda: self.status_bar.set_status(
+                        "Ready"
+                    )
+                )
+
+        except Exception as e:
+
+            self.root.after(
+                0,
+                lambda: self.log_panel.write(
+                    f"ERROR: {e}"
+                )
+            )
+
+            self.root.after(
+                0,
+                lambda: self.status_bar.set_status(
+                    "Export failed"
+                )
+            )
+
+        finally:
+
+            self.root.after(
+                0,
+                lambda: self.toolbar.set_enabled(True)
+            )
 
     # ==========================================================
     # Product Selection

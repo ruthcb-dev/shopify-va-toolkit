@@ -74,7 +74,7 @@ class AppController:
         )
 
     # ==========================================================
-    # CSV Generator
+    # Generate CSV (All Products)
     # ==========================================================
 
     def generate_csv(
@@ -88,6 +88,27 @@ class AppController:
 
         return generate_csv(
             products,
+            logger=logger
+        )
+
+    # ==========================================================
+    # Export Selected Products
+    # ==========================================================
+
+    def export_selected_products(
+        self,
+        selected_products,
+        logger=None
+    ):
+        """
+        Exports only the selected products to a Shopify CSV.
+        """
+
+        if not selected_products:
+            raise ValueError("No products selected.")
+
+        return generate_csv(
+            selected_products,
             logger=logger
         )
 

@@ -15,38 +15,30 @@ def create_handle(title):
 
 
 def get_option_value(variant, index):
-    """
-    Safely return option1, option2 or option3.
-    """
 
     return variant.get(f"option{index}", "")
 
 
 def generate_csv(products, logger=None):
     """
-    Generates a Shopify-compatible CSV file.
-
-    Returns:
-        Full path of the saved CSV.
+    Generates a Shopify-compatible CSV.
     """
 
     if not products:
-        raise ValueError("No products loaded.")
+        raise ValueError("No products supplied.")
 
     filename = filedialog.asksaveasfilename(
         title="Save Shopify CSV",
         defaultextension=".csv",
-        filetypes=[
-            ("CSV Files", "*.csv")
-        ],
-        initialfile="shopify_import.csv"
+        filetypes=[("CSV Files", "*.csv")],
+        initialfile="shopify_export.csv"
     )
 
     if not filename:
         return None
 
     if logger:
-        logger("Generating Shopify CSV...")
+        logger(f"Generating CSV for {len(products)} products...")
 
     rows = []
 
@@ -69,7 +61,7 @@ def generate_csv(products, logger=None):
 
         for variant in variants:
 
-            row = {
+            rows.append({
 
                 "Handle": handle,
 
@@ -155,9 +147,8 @@ def generate_csv(products, logger=None):
                 "Google Shopping / Custom Label 0": "",
 
                 "Status": "draft"
-            }
 
-            rows.append(row)
+            })
 
             first_variant = False
 
@@ -184,7 +175,7 @@ def generate_csv(products, logger=None):
     )
 
     if logger:
-        logger("CSV generated successfully.")
+        logger("CSV generation completed.")
         logger(filename)
 
     return filename

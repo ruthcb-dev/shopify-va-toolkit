@@ -28,7 +28,9 @@ class ProductPanel:
 
     def create_widgets(self):
 
-        # ===== Header =====
+        # ==========================================================
+        # Header
+        # ==========================================================
 
         header_frame = ttk.Frame(self.frame)
 
@@ -42,11 +44,11 @@ class ProductPanel:
             header_frame,
             text="Products",
             font=("Segoe UI", 11, "bold")
-        ).pack(
-            side="left"
-        )
+        ).pack(side="left")
 
-        # ===== Search =====
+        # ==========================================================
+        # Search
+        # ==========================================================
 
         search_frame = ttk.Frame(self.frame)
 
@@ -59,9 +61,7 @@ class ProductPanel:
         ttk.Label(
             search_frame,
             text="Search:"
-        ).pack(
-            side="left"
-        )
+        ).pack(side="left")
 
         self.search_var = tk.StringVar()
 
@@ -81,11 +81,11 @@ class ProductPanel:
             text="Search"
         )
 
-        self.search_button.pack(
-            side="left"
-        )
+        self.search_button.pack(side="left")
 
-        # ===== Product Table =====
+        # ==========================================================
+        # Product Table
+        # ==========================================================
 
         columns = (
             "Title",
@@ -98,7 +98,8 @@ class ProductPanel:
         self.tree = ttk.Treeview(
             self.frame,
             columns=columns,
-            show="headings"
+            show="headings",
+            selectmode="extended"
         )
 
         for column in columns:
@@ -108,31 +109,11 @@ class ProductPanel:
                 text=column
             )
 
-        self.tree.column(
-            "Title",
-            width=280
-        )
-
-        self.tree.column(
-            "Vendor",
-            width=120
-        )
-
-        self.tree.column(
-            "Type",
-            width=120
-        )
-
-        self.tree.column(
-            "Price",
-            width=80,
-            anchor="center"
-        )
-
-        self.tree.column(
-            "SKU",
-            width=120
-        )
+        self.tree.column("Title", width=280)
+        self.tree.column("Vendor", width=120)
+        self.tree.column("Type", width=120)
+        self.tree.column("Price", width=80, anchor="center")
+        self.tree.column("SKU", width=120)
 
         scrollbar = ttk.Scrollbar(
             self.frame,
@@ -155,8 +136,8 @@ class ProductPanel:
         scrollbar.pack(
             side="right",
             fill="y",
-            pady=(0, 10),
-            padx=(0, 10)
+            padx=(0, 10),
+            pady=(0, 10)
         )
 
         self.tree.bind(
@@ -165,37 +146,48 @@ class ProductPanel:
         )
 
     def on_select(self, event):
-        """
-        Called whenever the user selects a product.
-        """
 
         selection = self.tree.selection()
 
         if not selection:
             return
 
-        index = self.tree.index(selection[0])
+        first = self.tree.index(selection[0])
 
-        if index >= len(self.products):
-            return
+        if first < len(self.products):
 
-        product = self.products[index]
+            if self.selection_callback:
 
-        if self.selection_callback:
-            self.selection_callback(product)
+                self.selection_callback(
+                    self.products[first]
+                )
+
+    def get_selected_products(self):
+        """
+        Returns all selected products.
+        """
+
+        selected = []
+
+        for item in self.tree.selection():
+
+            index = self.tree.index(item)
+
+            if index < len(self.products):
+
+                selected.append(
+                    self.products[index]
+                )
+
+        return selected
 
     def clear(self):
-        """
-        Removes all rows from the product table.
-        """
 
         for item in self.tree.get_children():
+
             self.tree.delete(item)
 
     def load_products(self, products):
-        """
-        Loads Shopify products into the table.
-        """
 
         self.products = products
 
@@ -218,5 +210,3 @@ class ProductPanel:
                     variant.get("sku", "")
                 )
             )
-
-       
