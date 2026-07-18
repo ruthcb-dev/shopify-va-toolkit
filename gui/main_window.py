@@ -88,7 +88,12 @@ class MainWindow:
         # Controller
         # ==========================================================
 
-        self.controller = AppController()
+        self.controller = AppController(
+            store_url=self.settings.get(
+                "store_url",
+                ""
+            )
+        )
 
         # ==========================================================
         # Interface
@@ -315,6 +320,13 @@ class MainWindow:
                 )
             )
 
+            self.controller.set_store_url(
+                self.settings.get(
+                    "store_url",
+                    ""
+                )
+            )
+            
             self.ensure_settings_folders()
 
             self.log_panel.write(

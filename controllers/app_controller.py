@@ -10,9 +10,17 @@ class AppController:
     the Shopify service layer.
     """
 
-    def __init__(self):
+    def __init__(self, store_url=""):
 
         self.products = []
+        self.store_url = store_url
+
+    def set_store_url(self, store_url):
+        """
+        Updates the Shopify Store URL used for product retrieval.
+        """
+
+        self.store_url = str(store_url or "").strip()
 
     # ==========================================================
     # Product Retrieval
@@ -20,8 +28,9 @@ class AppController:
 
     def fetch_products(self):
 
-        self.products = get_products()
-
+        self.products = get_products(
+            self.store_url
+        )
         return self.products
 
     # ==========================================================

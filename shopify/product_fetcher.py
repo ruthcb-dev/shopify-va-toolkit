@@ -1,13 +1,79 @@
 import requests
-from config import STORE_URL, PRODUCT_LIMIT, HEADERS
+
+from config import HEADERS, PRODUCT_LIMIT
 
 
-def get_products():
-    url = f"{STORE_URL}/products.json?limit={PRODUCT_LIMIT}"
+def get_products(store_url):
+    """
+    Fetch products from a Shopify store.
 
-    response = requests.get(url, headers=HEADERS)
+    Parameters
+    ----------
+    store_url : str
+        Shopify store URL, such as:
+        https://example-store.com
 
-    if response.status_code != 200:
-        raise Exception(f"Error {response.status_code}")
+    Returns
+    -------
+    list
+        Shopify product records.
+    """
 
-    return response.json()["products"]
+    store_url = str(store_url or "").strip()
+
+    if not store_url:
+        raise ValueError(
+            "No Shopify Store URL configured. "
+            "Open File > Settings and enter a Store URL."
+        )
+
+    if not store_url.startswith(
+        ("http://", "https://")
+    ):
+        raise ValueError(
+            "Store URL must begin with http:// or https://."
+        )
+
+    store_url = store_url.rstrip("/")
+
+    if store_url.endswith("/products.json"):
+        products_url = store_url
+    else:
+        products_url = f"{store_url}/products.json"
+
+    response = requests.get(
+        products_url,
+        headers=HEADERS,
+        params={
+            "limit": PRODUCT_LIMIT
+        },
+        timeout=30
+    )
+
+    try:
+        response.raise_for_status()
+
+    except requests.HTTPError as error:
+        raise RuntimeError(
+            f"Shopify request failed with status "
+            f"{response.status_code}."
+        ) from error
+
+    try:
+        response_data = response.json()
+
+    except requests.JSONDecodeError as error:
+        raise RuntimeError(
+            "The Shopify store returned an invalid response."
+        ) from error
+
+    products = response_data.get(
+        "products"
+    )
+
+    if products is None:
+        raise RuntimeError(
+            "The Shopify response does not contain a products list."
+        )
+
+    return products
