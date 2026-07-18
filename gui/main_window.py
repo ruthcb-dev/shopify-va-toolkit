@@ -5,7 +5,7 @@ import threading
 import tkinter as tk
 
 from pathlib import Path
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, ttk
 
 from app_config.config_manager import ConfigManager
 from controllers.app_controller import AppController
@@ -21,18 +21,29 @@ from gui.toolbar import Toolbar
 
 class MainWindow:
     """
-    Main application window.
+    Main application window for Shopify VA Toolkit.
     """
 
     def __init__(self):
 
         self.root = tk.Tk()
 
-        self.root.title("Shopify VA Toolkit v2.0")
-        self.root.geometry("1200x750")
-        self.root.minsize(1000, 650)
+        self.root.title(
+            "Shopify VA Toolkit v2.0"
+        )
 
+        self.root.geometry(
+            "1200x750"
+        )
+
+        self.root.minsize(
+            1000,
+            650
+        )
+
+        # ==========================================================
         # Root Grid
+        # ==========================================================
 
         self.root.grid_rowconfigure(
             0,
@@ -114,7 +125,7 @@ class MainWindow:
     def create_layout(self):
 
         # ==========================================================
-        # Toolbar
+        # Toolbar Frame
         # ==========================================================
 
         self.toolbar_frame = ttk.Frame(
@@ -129,7 +140,7 @@ class MainWindow:
         )
 
         # ==========================================================
-        # Main Content
+        # Main Content Frame
         # ==========================================================
 
         self.content_frame = ttk.Frame(
@@ -158,6 +169,10 @@ class MainWindow:
             weight=1
         )
 
+        # ==========================================================
+        # Product Panel Frame
+        # ==========================================================
+
         self.left_panel = ttk.Frame(
             self.content_frame,
             relief="solid",
@@ -170,6 +185,10 @@ class MainWindow:
             sticky="nsew",
             padx=(0, 5)
         )
+
+        # ==========================================================
+        # Product Details Frame
+        # ==========================================================
 
         self.right_panel = ttk.Frame(
             self.content_frame,
@@ -185,7 +204,7 @@ class MainWindow:
         )
 
         # ==========================================================
-        # Activity Log
+        # Activity Log Frame
         # ==========================================================
 
         self.log_frame = ttk.Frame(
@@ -200,7 +219,7 @@ class MainWindow:
         )
 
         # ==========================================================
-        # Status Bar
+        # Status Bar Frame
         # ==========================================================
 
         self.status_frame = ttk.Frame(
@@ -264,7 +283,7 @@ class MainWindow:
         )
 
     # ==========================================================
-    # Application
+    # Run Application
     # ==========================================================
 
     def run(self):
@@ -283,7 +302,10 @@ class MainWindow:
             on_save=self.apply_settings
         )
 
-    def apply_settings(self, updated_settings):
+    def apply_settings(
+        self,
+        updated_settings
+    ):
 
         try:
 
@@ -305,17 +327,20 @@ class MainWindow:
 
         except OSError as error:
 
+            error_message = str(error)
+
             messagebox.showerror(
                 title="Settings Error",
                 message=(
                     "The settings could not be saved.\n\n"
-                    f"{error}"
+                    f"{error_message}"
                 ),
                 parent=self.root
             )
 
             self.log_panel.write(
-                f"ERROR: Settings could not be saved: {error}"
+                "ERROR: Settings could not be saved: "
+                f"{error_message}"
             )
 
             self.status_bar.set_status(
@@ -342,37 +367,80 @@ class MainWindow:
 
             try:
 
-                Path(folder_value).expanduser().mkdir(
+                Path(
+                    folder_value
+                ).expanduser().mkdir(
                     parents=True,
                     exist_ok=True
                 )
 
             except OSError:
 
-                # Folder errors are handled later when the folder is used.
+                # Folder errors are handled when the folder is used.
                 pass
 
     # ==========================================================
-    # Open Folder
+    # Folder Helpers
     # ==========================================================
 
-    def open_folder(self, folder_path):
+    def get_output_folder(self):
+
+        output_folder = self.settings.get(
+            "output_folder",
+            "output"
+        )
+
+        folder = Path(
+            output_folder
+        ).expanduser()
+
+        folder.mkdir(
+            parents=True,
+            exist_ok=True
+        )
+
+        return folder
+
+    def get_image_folder(self):
+
+        image_folder = self.settings.get(
+            "image_folder",
+            "images"
+        )
+
+        folder = Path(
+            image_folder
+        ).expanduser()
+
+        folder.mkdir(
+            parents=True,
+            exist_ok=True
+        )
+
+        return folder
+
+    def open_folder(
+        self,
+        folder_path
+    ):
 
         folder = Path(
             folder_path
         ).expanduser()
 
-        if not folder.exists():
+        folder.mkdir(
+            parents=True,
+            exist_ok=True
+        )
 
-            folder.mkdir(
-                parents=True,
-                exist_ok=True
-            )
+        resolved_folder = folder.resolve()
 
-        if sys.platform.startswith("win"):
+        if sys.platform.startswith(
+            "win"
+        ):
 
             os.startfile(
-                str(folder.resolve())
+                str(resolved_folder)
             )
 
         elif sys.platform == "darwin":
@@ -380,7 +448,7 @@ class MainWindow:
             subprocess.Popen(
                 [
                     "open",
-                    str(folder.resolve())
+                    str(resolved_folder)
                 ]
             )
 
@@ -389,11 +457,14 @@ class MainWindow:
             subprocess.Popen(
                 [
                     "xdg-open",
-                    str(folder.resolve())
+                    str(resolved_folder)
                 ]
             )
 
-    def open_export_location(self, filename):
+    def open_export_location(
+        self,
+        filename
+    ):
 
         if not self.settings.get(
             "open_output_after_export",
@@ -413,9 +484,8 @@ class MainWindow:
 
         else:
 
-            export_folder = self.settings.get(
-                "output_folder",
-                "output"
+            export_folder = (
+                self.get_output_folder()
             )
 
         try:
@@ -433,8 +503,11 @@ class MainWindow:
             subprocess.SubprocessError
         ) as error:
 
+            error_message = str(error)
+
             self.log_panel.write(
-                f"ERROR: Could not open output folder: {error}"
+                "ERROR: Could not open output folder: "
+                f"{error_message}"
             )
 
             self.status_bar.set_status(
@@ -577,7 +650,7 @@ class MainWindow:
             self.root.after(
                 0,
                 lambda: self.status_bar.set_status(
-                    "Error"
+                    "Fetch failed"
                 )
             )
 
@@ -592,6 +665,7 @@ class MainWindow:
                 0,
                 lambda: self.toolbar.set_enabled(True)
             )
+
     # ==========================================================
     # Download Images
     # ==========================================================
@@ -618,7 +692,7 @@ class MainWindow:
         self.root.after(
             0,
             lambda: self.status_bar.set_status(
-                "Downloading images..."
+                "Downloading product images..."
             )
         )
 
@@ -631,14 +705,11 @@ class MainWindow:
 
         try:
 
-            image_folder = self.settings.get(
-                "image_folder",
-                "images"
-            )
-
-            downloaded_count = (
-                self.controller.download_images(
-                    output_folder=image_folder,
+            result = (
+                self.controller.download_product_images(
+                    output_folder=str(
+                        self.get_image_folder()
+                    ),
                     logger=lambda message:
                     self.root.after(
                         0,
@@ -650,17 +721,60 @@ class MainWindow:
                 )
             )
 
+            downloaded = result.get(
+                "downloaded",
+                0
+            )
+
+            skipped = result.get(
+                "skipped",
+                0
+            )
+
+            failed = result.get(
+                "failed",
+                0
+            )
+
             self.root.after(
                 0,
                 lambda: self.log_panel.write(
-                    f"Downloaded {downloaded_count} images."
+                    ""
+                )
+            )
+
+            self.root.after(
+                0,
+                lambda: self.log_panel.write(
+                    "Download Summary"
+                )
+            )
+
+            self.root.after(
+                0,
+                lambda: self.log_panel.write(
+                    f"Downloaded : {downloaded}"
+                )
+            )
+
+            self.root.after(
+                0,
+                lambda: self.log_panel.write(
+                    f"Skipped    : {skipped}"
+                )
+            )
+
+            self.root.after(
+                0,
+                lambda: self.log_panel.write(
+                    f"Failed     : {failed}"
                 )
             )
 
             self.root.after(
                 0,
                 lambda: self.status_bar.set_status(
-                    f"{downloaded_count} images downloaded"
+                    "Image download completed"
                 )
             )
 
@@ -701,12 +815,72 @@ class MainWindow:
 
     def on_generate_csv(self):
 
-        threading.Thread(
-            target=self.generate_csv_worker,
-            daemon=True
-        ).start()
+        try:
 
-    def generate_csv_worker(self):
+            output_folder = (
+                self.get_output_folder()
+            )
+
+            filename = filedialog.asksaveasfilename(
+                title="Save Shopify CSV",
+                parent=self.root,
+                initialdir=str(
+                    output_folder.resolve()
+                ),
+                initialfile="shopify_export.csv",
+                defaultextension=".csv",
+                filetypes=[
+                    (
+                        "CSV Files",
+                        "*.csv"
+                    )
+                ]
+            )
+
+            if not filename:
+
+                self.status_bar.set_status(
+                    "CSV generation cancelled"
+                )
+
+                self.log_panel.write(
+                    "CSV generation cancelled."
+                )
+
+                return
+
+            threading.Thread(
+                target=self.generate_csv_worker,
+                args=(filename,),
+                daemon=True
+            ).start()
+
+        except OSError as error:
+
+            error_message = str(error)
+
+            messagebox.showerror(
+                title="Output Folder Error",
+                message=(
+                    "The output folder could not be opened.\n\n"
+                    f"{error_message}"
+                ),
+                parent=self.root
+            )
+
+            self.log_panel.write(
+                "ERROR: Could not access output folder: "
+                f"{error_message}"
+            )
+
+            self.status_bar.set_status(
+                "Output folder error"
+            )
+
+    def generate_csv_worker(
+        self,
+        filename
+    ):
 
         self.root.after(
             0,
@@ -734,19 +908,14 @@ class MainWindow:
 
         try:
 
-            output_folder = self.settings.get(
-                "output_folder",
-                "output"
-            )
-
             csv_encoding = self.settings.get(
                 "csv_encoding",
                 "utf-8-sig"
             )
 
-            filename = (
+            generated_filename = (
                 self.controller.generate_csv(
-                    output_folder=output_folder,
+                    filename=filename,
                     encoding=csv_encoding,
                     logger=lambda message:
                     self.root.after(
@@ -759,38 +928,35 @@ class MainWindow:
                 )
             )
 
-            if filename:
-
-                self.root.after(
-                    0,
-                    lambda: self.log_panel.write(
-                        f"CSV generation completed.\n{filename}"
-                    )
+            self.root.after(
+                0,
+                lambda: self.log_panel.write(
+                    "CSV generation completed."
                 )
+            )
 
-                self.root.after(
-                    0,
-                    lambda: self.status_bar.set_status(
-                        "CSV generated"
-                    )
+            self.root.after(
+                0,
+                lambda output_file=generated_filename:
+                self.log_panel.write(
+                    output_file
                 )
+            )
 
-                self.root.after(
-                    0,
-                    lambda export_file=filename:
-                    self.open_export_location(
-                        export_file
-                    )
+            self.root.after(
+                0,
+                lambda: self.status_bar.set_status(
+                    "CSV generated"
                 )
+            )
 
-            else:
-
-                self.root.after(
-                    0,
-                    lambda: self.status_bar.set_status(
-                        "Ready"
-                    )
+            self.root.after(
+                0,
+                lambda output_file=generated_filename:
+                self.open_export_location(
+                    output_file
                 )
+            )
 
         except Exception as error:
 
@@ -829,12 +995,70 @@ class MainWindow:
 
     def on_validate_csv(self):
 
-        threading.Thread(
-            target=self.validate_csv_worker,
-            daemon=True
-        ).start()
+        try:
 
-    def validate_csv_worker(self):
+            output_folder = (
+                self.get_output_folder()
+            )
+
+            filename = filedialog.askopenfilename(
+                title="Select Shopify CSV",
+                parent=self.root,
+                initialdir=str(
+                    output_folder.resolve()
+                ),
+                filetypes=[
+                    (
+                        "CSV Files",
+                        "*.csv"
+                    )
+                ]
+            )
+
+            if not filename:
+
+                self.status_bar.set_status(
+                    "CSV validation cancelled"
+                )
+
+                self.log_panel.write(
+                    "CSV validation cancelled."
+                )
+
+                return
+
+            threading.Thread(
+                target=self.validate_csv_worker,
+                args=(filename,),
+                daemon=True
+            ).start()
+
+        except OSError as error:
+
+            error_message = str(error)
+
+            messagebox.showerror(
+                title="CSV Selection Error",
+                message=(
+                    "The CSV folder could not be opened.\n\n"
+                    f"{error_message}"
+                ),
+                parent=self.root
+            )
+
+            self.log_panel.write(
+                "ERROR: Could not access CSV folder: "
+                f"{error_message}"
+            )
+
+            self.status_bar.set_status(
+                "CSV folder error"
+            )
+
+    def validate_csv_worker(
+        self,
+        filename
+    ):
 
         self.root.after(
             0,
@@ -862,8 +1086,15 @@ class MainWindow:
 
         try:
 
+            csv_encoding = self.settings.get(
+                "csv_encoding",
+                "utf-8-sig"
+            )
+
             validation_result = (
                 self.controller.validate_csv(
+                    filename=filename,
+                    encoding=csv_encoding,
                     logger=lambda message:
                     self.root.after(
                         0,
@@ -875,23 +1106,53 @@ class MainWindow:
                 )
             )
 
-            if validation_result:
+            total_issues = (
+                validation_result.get(
+                    "duplicate_handles",
+                    0
+                )
+                + validation_result.get(
+                    "duplicate_skus",
+                    0
+                )
+                + validation_result.get(
+                    "missing_titles",
+                    0
+                )
+                + validation_result.get(
+                    "missing_vendors",
+                    0
+                )
+                + validation_result.get(
+                    "missing_prices",
+                    0
+                )
+                + validation_result.get(
+                    "missing_images",
+                    0
+                )
+            )
 
-                self.root.after(
-                    0,
-                    lambda: self.status_bar.set_status(
-                        "CSV validation completed"
-                    )
+            if total_issues == 0:
+
+                status_message = (
+                    "CSV validation completed — no issues found"
                 )
 
             else:
 
-                self.root.after(
-                    0,
-                    lambda: self.status_bar.set_status(
-                        "Ready"
-                    )
+                status_message = (
+                    f"CSV validation completed — "
+                    f"{total_issues} issue(s) found"
                 )
+
+            self.root.after(
+                0,
+                lambda message=status_message:
+                self.status_bar.set_status(
+                    message
+                )
+            )
 
         except Exception as error:
 
@@ -930,12 +1191,101 @@ class MainWindow:
 
     def on_export_selected(self):
 
-        threading.Thread(
-            target=self.export_selected_worker,
-            daemon=True
-        ).start()
+        try:
 
-    def export_selected_worker(self):
+            selected_products = (
+                self.product_panel.get_selected_products()
+            )
+
+            if not selected_products:
+
+                messagebox.showwarning(
+                    title="No Products Selected",
+                    message=(
+                        "Please select one or more products "
+                        "before exporting."
+                    ),
+                    parent=self.root
+                )
+
+                self.status_bar.set_status(
+                    "No products selected"
+                )
+
+                self.log_panel.write(
+                    "Export cancelled: no products selected."
+                )
+
+                return
+
+            output_folder = (
+                self.get_output_folder()
+            )
+
+            filename = filedialog.asksaveasfilename(
+                title="Export Selected Products",
+                parent=self.root,
+                initialdir=str(
+                    output_folder.resolve()
+                ),
+                initialfile="selected_products_export.csv",
+                defaultextension=".csv",
+                filetypes=[
+                    (
+                        "CSV Files",
+                        "*.csv"
+                    )
+                ]
+            )
+
+            if not filename:
+
+                self.status_bar.set_status(
+                    "Selected export cancelled"
+                )
+
+                self.log_panel.write(
+                    "Selected-product export cancelled."
+                )
+
+                return
+
+            threading.Thread(
+                target=self.export_selected_worker,
+                args=(
+                    selected_products,
+                    filename
+                ),
+                daemon=True
+            ).start()
+
+        except OSError as error:
+
+            error_message = str(error)
+
+            messagebox.showerror(
+                title="Export Folder Error",
+                message=(
+                    "The output folder could not be opened.\n\n"
+                    f"{error_message}"
+                ),
+                parent=self.root
+            )
+
+            self.log_panel.write(
+                "ERROR: Could not access export folder: "
+                f"{error_message}"
+            )
+
+            self.status_bar.set_status(
+                "Export folder error"
+            )
+
+    def export_selected_worker(
+        self,
+        selected_products,
+        filename
+    ):
 
         self.root.after(
             0,
@@ -963,30 +1313,15 @@ class MainWindow:
 
         try:
 
-            selected_products = (
-                self.product_panel.get_selected_products()
-            )
-
-            if not selected_products:
-
-                raise ValueError(
-                    "Please select one or more products first."
-                )
-
-            output_folder = self.settings.get(
-                "output_folder",
-                "output"
-            )
-
             csv_encoding = self.settings.get(
                 "csv_encoding",
                 "utf-8-sig"
             )
 
-            filename = (
+            generated_filename = (
                 self.controller.export_selected_products(
                     selected_products=selected_products,
-                    output_folder=output_folder,
+                    filename=filename,
                     encoding=csv_encoding,
                     logger=lambda message:
                     self.root.after(
@@ -999,38 +1334,35 @@ class MainWindow:
                 )
             )
 
-            if filename:
-
-                self.root.after(
-                    0,
-                    lambda: self.log_panel.write(
-                        f"Export completed.\n{filename}"
-                    )
+            self.root.after(
+                0,
+                lambda: self.log_panel.write(
+                    "Selected-product export completed."
                 )
+            )
 
-                self.root.after(
-                    0,
-                    lambda: self.status_bar.set_status(
-                        "Selected products exported"
-                    )
+            self.root.after(
+                0,
+                lambda output_file=generated_filename:
+                self.log_panel.write(
+                    output_file
                 )
+            )
 
-                self.root.after(
-                    0,
-                    lambda export_file=filename:
-                    self.open_export_location(
-                        export_file
-                    )
+            self.root.after(
+                0,
+                lambda: self.status_bar.set_status(
+                    "Selected products exported"
                 )
+            )
 
-            else:
-
-                self.root.after(
-                    0,
-                    lambda: self.status_bar.set_status(
-                        "Ready"
-                    )
+            self.root.after(
+                0,
+                lambda output_file=generated_filename:
+                self.open_export_location(
+                    output_file
                 )
+            )
 
         except Exception as error:
 
@@ -1047,7 +1379,7 @@ class MainWindow:
             self.root.after(
                 0,
                 lambda: self.status_bar.set_status(
-                    "Export failed"
+                    "Selected export failed"
                 )
             )
 
@@ -1067,23 +1399,111 @@ class MainWindow:
     # Product Selection
     # ==========================================================
 
-    def on_product_selected(self, product):
+    def on_product_selected(
+        self,
+        product
+    ):
+        """
+        Called whenever the user selects a product in the
+        Product Panel.
+        """
 
         self.selected_product = product
 
-        product_title = product.get(
+        if not product:
+
+            self.details_panel.clear()
+
+            self.status_bar.set_status(
+                "No product selected"
+            )
+
+            return
+
+        self.details_panel.display_product(
+            product
+        )
+
+        title = product.get(
             "title",
             "Untitled Product"
         )
 
-        self.log_panel.write(
-            f"Selected product: {product_title}"
+        self.status_bar.set_status(
+            f"Selected: {title}"
         )
+
+    # ==========================================================
+    # Logging Helper
+    # ==========================================================
+
+    def log(
+        self,
+        message
+    ):
+        """
+        Writes a message to the Activity Log.
+        """
+
+        self.log_panel.write(
+            str(message)
+        )
+
+    # ==========================================================
+    # Status Helper
+    # ==========================================================
+
+    def set_status(
+        self,
+        message
+    ):
+        """
+        Updates the Status Bar.
+        """
 
         self.status_bar.set_status(
-            "Product selected"
+            str(message)
         )
 
-        self.details_panel.show_product(
-            product
-        )
+    # ==========================================================
+    # Refresh Product List
+    # ==========================================================
+
+    def refresh_products(self):
+
+        try:
+
+            self.product_panel.load_products(
+                self.controller.products
+            )
+
+        except Exception:
+
+            pass
+
+    # ==========================================================
+    # Clear Product Details
+    # ==========================================================
+
+    def clear_product_details(self):
+
+        self.selected_product = None
+
+        self.details_panel.clear()
+
+    # ==========================================================
+    # Reset Application
+    # ==========================================================
+
+    def reset_ui(self):
+        """
+        Resets temporary UI state after operations.
+        """
+
+        self.toolbar.stop_progress()
+
+        self.toolbar.set_enabled(True)
+
+    # ==========================================================
+    # End of MainWindow
+    # ==========================================================

@@ -1,181 +1,348 @@
 import re
+from pathlib import Path
+
 import pandas as pd
-from tkinter import filedialog
 
 
 def create_handle(title):
     """
-    Convert product title into a Shopify handle.
+    Converts a product title into a Shopify-compatible handle.
     """
 
-    handle = title.lower()
-    handle = re.sub(r"[^a-z0-9]+", "-", handle)
+    title = str(title or "").lower()
+    handle = re.sub(r"[^a-z0-9]+", "-", title)
 
     return handle.strip("-")
 
 
 def get_option_value(variant, index):
-
-    return variant.get(f"option{index}", "")
-
-
-def generate_csv(products, logger=None):
     """
-    Generates a Shopify-compatible CSV.
+    Returns a Shopify variant option value.
+    """
+
+    return variant.get(
+        f"option{index}",
+        ""
+    )
+
+
+def format_tags(tags):
+    """
+    Converts Shopify tags into a CSV-friendly string.
+    """
+
+    if isinstance(tags, list):
+        return ", ".join(
+            str(tag) for tag in tags
+        )
+
+    return str(tags or "")
+
+
+def generate_csv(
+    products,
+    filename,
+    encoding="utf-8-sig",
+    logger=None
+):
+    """
+    Generates a Shopify-compatible CSV file.
+
+    Parameters
+    ----------
+    products : list
+        Shopify product records.
+
+    filename : str or Path
+        Full destination path for the generated CSV.
+
+    encoding : str, optional
+        CSV file encoding.
+
+    logger : callable, optional
+        Function used for activity logging.
+
+    Returns
+    -------
+    str
+        Full path of the generated CSV file.
     """
 
     if not products:
-        raise ValueError("No products supplied.")
-
-    filename = filedialog.asksaveasfilename(
-        title="Save Shopify CSV",
-        defaultextension=".csv",
-        filetypes=[("CSV Files", "*.csv")],
-        initialfile="shopify_export.csv"
-    )
+        raise ValueError(
+            "No products supplied."
+        )
 
     if not filename:
-        return None
+        raise ValueError(
+            "No output filename supplied."
+        )
+
+    output_file = Path(
+        filename
+    ).expanduser()
+
+    output_file.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
     if logger:
-        logger(f"Generating CSV for {len(products)} products...")
+
+        logger(
+            f"Generating CSV for {len(products)} products..."
+        )
+
+        logger(
+            f"Output file: {output_file}"
+        )
 
     rows = []
 
     for product in products:
 
-        handle = create_handle(product["title"])
+        product_title = product.get(
+            "title",
+            ""
+        )
 
-        variants = product.get("variants", [])
-        images = product.get("images", [])
-        options = product.get("options", [])
+        handle = create_handle(
+            product_title
+        )
 
-        option_names = ["", "", ""]
+        variants = product.get(
+            "variants",
+            []
+        )
 
-        for i, option in enumerate(options):
+        images = product.get(
+            "images",
+            []
+        )
 
-            if i < 3:
-                option_names[i] = option["name"]
+        options = product.get(
+            "options",
+            []
+        )
+
+        option_names = [
+            "",
+            "",
+            ""
+        ]
+
+        for index, option in enumerate(options):
+
+            if index >= 3:
+                break
+
+            option_names[index] = option.get(
+                "name",
+                ""
+            )
 
         first_variant = True
 
         for variant in variants:
 
-            rows.append({
+            rows.append(
+                {
+                    "Handle": handle,
 
-                "Handle": handle,
+                    "Title": (
+                        product_title
+                        if first_variant
+                        else ""
+                    ),
 
-                "Title": product["title"] if first_variant else "",
+                    "Body (HTML)": (
+                        product.get(
+                            "body_html",
+                            ""
+                        )
+                        if first_variant
+                        else ""
+                    ),
 
-                "Body (HTML)": product["body_html"] if first_variant else "",
+                    "Vendor": (
+                        product.get(
+                            "vendor",
+                            ""
+                        )
+                        if first_variant
+                        else ""
+                    ),
 
-                "Vendor": product["vendor"] if first_variant else "",
+                    "Product Category": "",
 
-                "Product Category": "",
+                    "Type": (
+                        product.get(
+                            "product_type",
+                            ""
+                        )
+                        if first_variant
+                        else ""
+                    ),
 
-                "Type": product["product_type"] if first_variant else "",
+                    "Tags": (
+                        format_tags(
+                            product.get(
+                                "tags",
+                                []
+                            )
+                        )
+                        if first_variant
+                        else ""
+                    ),
 
-                "Tags": product["tags"] if first_variant else "",
+                    "Published": "TRUE",
 
-                "Published": "TRUE",
+                    "Option1 Name": option_names[0],
 
-                "Option1 Name": option_names[0],
-                "Option1 Value": get_option_value(variant, 1),
+                    "Option1 Value": get_option_value(
+                        variant,
+                        1
+                    ),
 
-                "Option2 Name": option_names[1],
-                "Option2 Value": get_option_value(variant, 2),
+                    "Option2 Name": option_names[1],
 
-                "Option3 Name": option_names[2],
-                "Option3 Value": get_option_value(variant, 3),
+                    "Option2 Value": get_option_value(
+                        variant,
+                        2
+                    ),
 
-                "Variant SKU": variant.get("sku", ""),
+                    "Option3 Name": option_names[2],
 
-                "Variant Grams": variant.get("grams", ""),
+                    "Option3 Value": get_option_value(
+                        variant,
+                        3
+                    ),
 
-                "Variant Inventory Tracker": "shopify",
+                    "Variant SKU": variant.get(
+                        "sku",
+                        ""
+                    ),
 
-                "Variant Inventory Qty": variant.get(
-                    "inventory_quantity",
-                    0
-                ),
+                    "Variant Grams": variant.get(
+                        "grams",
+                        ""
+                    ),
 
-                "Variant Inventory Policy": "deny",
+                    "Variant Inventory Tracker": "shopify",
 
-                "Variant Fulfillment Service": "manual",
+                    "Variant Inventory Qty": variant.get(
+                        "inventory_quantity",
+                        0
+                    ),
 
-                "Variant Price": variant.get("price", ""),
+                    "Variant Inventory Policy": "deny",
 
-                "Variant Compare At Price": variant.get(
-                    "compare_at_price",
-                    ""
-                ),
+                    "Variant Fulfillment Service": "manual",
 
-                "Variant Requires Shipping": "TRUE",
+                    "Variant Price": variant.get(
+                        "price",
+                        ""
+                    ),
 
-                "Variant Taxable": "TRUE",
+                    "Variant Compare At Price": variant.get(
+                        "compare_at_price",
+                        ""
+                    ),
 
-                "Variant Barcode": variant.get("barcode", ""),
+                    "Variant Requires Shipping": "TRUE",
 
-                "Image Src": (
-                    images[0]["src"]
-                    if first_variant and images
-                    else ""
-                ),
+                    "Variant Taxable": "TRUE",
 
-                "Image Position": (
-                    1
-                    if first_variant and images
-                    else ""
-                ),
+                    "Variant Barcode": variant.get(
+                        "barcode",
+                        ""
+                    ),
 
-                "Gift Card": "FALSE",
+                    "Image Src": (
+                        images[0].get(
+                            "src",
+                            ""
+                        )
+                        if first_variant and images
+                        else ""
+                    ),
 
-                "SEO Title": "",
+                    "Image Position": (
+                        1
+                        if first_variant and images
+                        else ""
+                    ),
 
-                "SEO Description": "",
+                    "Gift Card": "FALSE",
 
-                "Google Shopping / Gender": "",
+                    "SEO Title": "",
 
-                "Google Shopping / Age Group": "",
+                    "SEO Description": "",
 
-                "Google Shopping / MPN": "",
+                    "Google Shopping / Gender": "",
 
-                "Google Shopping / Condition": "",
+                    "Google Shopping / Age Group": "",
 
-                "Google Shopping / Custom Product": "",
+                    "Google Shopping / MPN": "",
 
-                "Google Shopping / Custom Label 0": "",
+                    "Google Shopping / Condition": "",
 
-                "Status": "draft"
+                    "Google Shopping / Custom Product": "",
 
-            })
+                    "Google Shopping / Custom Label 0": "",
+
+                    "Status": "draft"
+                }
+            )
 
             first_variant = False
 
         if len(images) > 1:
 
-            for position, image in enumerate(images[1:], start=2):
+            for position, image in enumerate(
+                images[1:],
+                start=2
+            ):
 
-                rows.append({
+                rows.append(
+                    {
+                        "Handle": handle,
 
-                    "Handle": handle,
+                        "Image Src": image.get(
+                            "src",
+                            ""
+                        ),
 
-                    "Image Src": image["src"],
+                        "Image Position": position
+                    }
+                )
 
-                    "Image Position": position
+    if not rows:
 
-                })
+        raise ValueError(
+            "The selected products contain no exportable variants."
+        )
 
-    df = pd.DataFrame(rows)
+    dataframe = pd.DataFrame(
+        rows
+    )
 
-    df.to_csv(
-        filename,
+    dataframe.to_csv(
+        output_file,
         index=False,
-        encoding="utf-8-sig"
+        encoding=encoding
     )
 
     if logger:
-        logger("CSV generation completed.")
-        logger(filename)
 
-    return filename
+        logger(
+            "CSV generation completed."
+        )
+
+        logger(
+            str(output_file)
+        )
+
+    return str(
+        output_file.resolve()
+    )

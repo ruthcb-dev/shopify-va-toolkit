@@ -1,5 +1,5 @@
-import os
-from urllib.parse import urlparse
+from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 import requests
 
@@ -8,122 +8,324 @@ from config import HEADERS
 
 def clean_filename(name):
     """
-    Removes characters that Windows does not allow
-    in filenames.
+    Removes characters that Windows does not allow in filenames.
+
+    Parameters
+    ----------
+    name : str
+        Original filename or folder name.
+
+    Returns
+    -------
+    str
+        Windows-safe filename.
     """
 
-    return "".join(
-        c for c in name
-        if c.isalnum() or c in (" ", "-", "_")
+    cleaned_name = "".join(
+        character
+        for character in str(name or "")
+        if character.isalnum()
+        or character in (" ", "-", "_", ".")
     ).strip()
 
+    return cleaned_name or "Unknown Product"
 
-def download_images(products, logger=None):
+
+def get_image_filename(image_url, image_index):
     """
-    Downloads product images.
+    Extracts and cleans an image filename from its URL.
+
+    A fallback filename is generated when the URL does not contain one.
+    """
+
+    parsed_url = urlparse(image_url)
+
+    original_filename = Path(
+        unquote(parsed_url.path)
+    ).name
+
+    if not original_filename:
+
+        return f"image_{image_index}.jpg"
+
+    filename_path = Path(original_filename)
+
+    safe_stem = clean_filename(
+        filename_path.stem
+    )
+
+    safe_suffix = filename_path.suffix.lower()
+
+    if not safe_suffix:
+
+        safe_suffix = ".jpg"
+
+    return f"{safe_stem}{safe_suffix}"
+
+
+def create_unique_filepath(
+    product_folder,
+    filename
+):
+    """
+    Creates a unique destination path when two images share a filename.
+    """
+
+    filepath = product_folder / filename
+
+    if not filepath.exists():
+
+        return filepath
+
+    filename_path = Path(filename)
+
+    stem = filename_path.stem
+    suffix = filename_path.suffix
+
+    counter = 2
+
+    while True:
+
+        candidate = product_folder / (
+            f"{stem}_{counter}{suffix}"
+        )
+
+        if not candidate.exists():
+
+            return candidate
+
+        counter += 1
+
+
+def download_images(
+    products,
+    output_folder="images",
+    logger=None
+):
+    """
+    Downloads Shopify product images.
 
     Parameters
     ----------
     products : list
-        Shopify product list.
+        Shopify product records.
+
+    output_folder : str or Path, optional
+        Root folder where product-image folders are created.
 
     logger : callable, optional
-        Function used for logging progress.
+        Function used for activity logging.
 
-        Example:
-            logger("Downloading image...")
+    Returns
+    -------
+    dict
+        Download summary containing downloaded, skipped,
+        failed, and product counts.
     """
 
-    os.makedirs("images", exist_ok=True)
+    if not products:
+
+        raise ValueError(
+            "No products supplied."
+        )
+
+    if not output_folder:
+
+        raise ValueError(
+            "No image output folder supplied."
+        )
+
+    destination_folder = Path(
+        output_folder
+    ).expanduser()
+
+    destination_folder.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
     downloaded = 0
     skipped = 0
+    failed = 0
 
     total_products = len(products)
 
-    for product_index, product in enumerate(products, start=1):
+    if logger:
 
-        product_name = clean_filename(
-            product.get("title", "Unknown Product")
+        logger(
+            f"Image folder: {destination_folder.resolve()}"
         )
 
-        product_folder = os.path.join(
-            "images",
-            product_name
+        logger(
+            f"Processing {total_products} products..."
         )
 
-        os.makedirs(
-            product_folder,
-            exist_ok=True
+    with requests.Session() as session:
+
+        session.headers.update(
+            HEADERS
         )
 
-        if logger:
-            logger(
-                f"[{product_index}/{total_products}] {product_name}"
+        for product_index, product in enumerate(
+            products,
+            start=1
+        ):
+
+            product_name = clean_filename(
+                product.get(
+                    "title",
+                    "Unknown Product"
+                )
             )
 
-        for image in product.get("images", []):
-
-            image_url = image.get("src")
-
-            if not image_url:
-                continue
-
-            filename = os.path.basename(
-                urlparse(image_url).path
+            product_folder = (
+                destination_folder
+                / product_name
             )
 
-            filepath = os.path.join(
-                product_folder,
-                filename
+            product_folder.mkdir(
+                parents=True,
+                exist_ok=True
             )
 
-            if os.path.exists(filepath):
+            if logger:
 
-                skipped += 1
+                logger(
+                    f"[{product_index}/{total_products}] "
+                    f"{product_name}"
+                )
+
+            images = product.get(
+                "images",
+                []
+            )
+
+            if not images:
 
                 if logger:
+
                     logger(
-                        f"   ✓ Already exists: {filename}"
+                        "   No images found."
                     )
 
                 continue
 
-            response = requests.get(
-                image_url,
-                headers=HEADERS,
-                timeout=30
-            )
+            for image_index, image in enumerate(
+                images,
+                start=1
+            ):
 
-            response.raise_for_status()
-
-            with open(filepath, "wb") as file:
-
-                file.write(response.content)
-
-            downloaded += 1
-
-            if logger:
-                logger(
-                    f"   ✓ Downloaded: {filename}"
+                image_url = image.get(
+                    "src",
+                    ""
                 )
+
+                if not image_url:
+
+                    skipped += 1
+
+                    if logger:
+
+                        logger(
+                            "   Skipped image with no URL."
+                        )
+
+                    continue
+
+                filename = get_image_filename(
+                    image_url,
+                    image_index
+                )
+
+                expected_filepath = (
+                    product_folder
+                    / filename
+                )
+
+                if expected_filepath.exists():
+
+                    skipped += 1
+
+                    if logger:
+
+                        logger(
+                            f"   Already exists: {filename}"
+                        )
+
+                    continue
+
+                filepath = create_unique_filepath(
+                    product_folder,
+                    filename
+                )
+
+                try:
+
+                    response = session.get(
+                        image_url,
+                        timeout=30
+                    )
+
+                    response.raise_for_status()
+
+                    with filepath.open(
+                        "wb"
+                    ) as file:
+
+                        file.write(
+                            response.content
+                        )
+
+                    downloaded += 1
+
+                    if logger:
+
+                        logger(
+                            f"   Downloaded: {filepath.name}"
+                        )
+
+                except requests.RequestException as error:
+
+                    failed += 1
+
+                    if logger:
+
+                        logger(
+                            f"   Failed: {filename} — {error}"
+                        )
+
+                except OSError as error:
+
+                    failed += 1
+
+                    if logger:
+
+                        logger(
+                            f"   Could not save {filename} — {error}"
+                        )
+
+    result = {
+        "downloaded": downloaded,
+        "skipped": skipped,
+        "failed": failed,
+        "products": total_products,
+        "output_folder": str(
+            destination_folder.resolve()
+        )
+    }
 
     if logger:
 
         logger("")
-
         logger("Image download completed.")
-
         logger(
             f"Downloaded : {downloaded}"
         )
-
         logger(
-            f"Skipped     : {skipped}"
+            f"Skipped    : {skipped}"
+        )
+        logger(
+            f"Failed     : {failed}"
         )
 
-    return {
-        "downloaded": downloaded,
-        "skipped": skipped,
-        "products": total_products
-    }
+    return result

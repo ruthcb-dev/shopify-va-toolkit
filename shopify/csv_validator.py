@@ -1,67 +1,152 @@
+from pathlib import Path
+
 import pandas as pd
-from tkinter import filedialog
 
 
-def validate_csv(logger=None):
+REQUIRED_COLUMNS = [
+    "Handle",
+    "Title",
+    "Vendor",
+    "Variant SKU",
+    "Variant Price",
+    "Image Src"
+]
+
+
+def validate_csv(
+    filename,
+    encoding="utf-8-sig",
+    logger=None
+):
     """
     Validates a Shopify CSV file.
 
-    Returns:
-        True if validation completed,
-        False if cancelled.
+    Parameters
+    ----------
+    filename : str or Path
+        Full path of the CSV file to validate.
+
+    encoding : str, optional
+        Encoding used to read the CSV file.
+
+    logger : callable, optional
+        Function used for activity logging.
+
+    Returns
+    -------
+    dict
+        Validation summary containing row counts,
+        missing columns, duplicates, and missing values.
     """
 
-    filename = filedialog.askopenfilename(
-        title="Select Shopify CSV",
-        filetypes=[
-            ("CSV Files", "*.csv")
-        ]
-    )
-
     if not filename:
-        return False
+        raise ValueError(
+            "No CSV filename supplied."
+        )
+
+    csv_file = Path(
+        filename
+    ).expanduser()
+
+    if not csv_file.exists():
+
+        raise FileNotFoundError(
+            f"CSV file not found: {csv_file}"
+        )
+
+    if not csv_file.is_file():
+
+        raise ValueError(
+            f"The selected path is not a file: {csv_file}"
+        )
+
+    if csv_file.suffix.lower() != ".csv":
+
+        raise ValueError(
+            "The selected file must be a CSV file."
+        )
 
     if logger:
-        logger(f"Opening CSV:\n{filename}")
 
-    df = pd.read_csv(filename)
+        logger(
+            f"Opening CSV:\n{csv_file}"
+        )
 
-    if logger:
-        logger("")
-        logger("========== CSV Validation ==========")
-        logger(f"Rows: {len(df)}")
+    try:
 
-    required_columns = [
-        "Handle",
-        "Title",
-        "Vendor",
-        "Variant SKU",
-        "Variant Price",
-        "Image Src"
+        dataframe = pd.read_csv(
+            csv_file,
+            encoding=encoding
+        )
+
+    except UnicodeDecodeError:
+
+        if encoding == "utf-8-sig":
+
+            dataframe = pd.read_csv(
+                csv_file,
+                encoding="utf-8"
+            )
+
+        else:
+
+            raise
+
+    except pd.errors.EmptyDataError as error:
+
+        raise ValueError(
+            "The selected CSV file is empty."
+        ) from error
+
+    except pd.errors.ParserError as error:
+
+        raise ValueError(
+            "The selected CSV file could not be parsed."
+        ) from error
+
+    missing_columns = [
+        column
+        for column in REQUIRED_COLUMNS
+        if column not in dataframe.columns
     ]
 
-    missing_columns = []
+    if logger:
 
-    for column in required_columns:
-
-        if column not in df.columns:
-            missing_columns.append(column)
+        logger("")
+        logger("========== CSV Validation ==========")
+        logger(
+            f"Rows: {len(dataframe)}"
+        )
 
     if missing_columns:
 
         if logger:
+
             logger("")
             logger("Missing Columns:")
 
             for column in missing_columns:
-                logger(f"   • {column}")
 
-        raise ValueError("CSV is missing required columns.")
+                logger(
+                    f"   • {column}"
+                )
 
-    duplicate_handles = df["Handle"].duplicated().sum()
+        raise ValueError(
+            "CSV is missing required columns: "
+            + ", ".join(missing_columns)
+        )
+
+    duplicate_handles = (
+        dataframe["Handle"]
+        .fillna("")
+        .replace("", pd.NA)
+        .dropna()
+        .duplicated()
+        .sum()
+    )
 
     duplicate_skus = (
-        df["Variant SKU"]
+        dataframe["Variant SKU"]
         .fillna("")
         .replace("", pd.NA)
         .dropna()
@@ -70,43 +155,93 @@ def validate_csv(logger=None):
     )
 
     missing_titles = (
-        df["Title"]
+        dataframe["Title"]
         .fillna("")
+        .astype(str)
+        .str.strip()
+        .eq("")
+        .sum()
+    )
+
+    missing_vendors = (
+        dataframe["Vendor"]
+        .fillna("")
+        .astype(str)
+        .str.strip()
         .eq("")
         .sum()
     )
 
     missing_prices = (
-        df["Variant Price"]
+        dataframe["Variant Price"]
         .fillna("")
-        .eq("")
-        .sum()
-    )
-
-    missing_vendor = (
-        df["Vendor"]
-        .fillna("")
+        .astype(str)
+        .str.strip()
         .eq("")
         .sum()
     )
 
     missing_images = (
-        df["Image Src"]
+        dataframe["Image Src"]
         .fillna("")
+        .astype(str)
+        .str.strip()
         .eq("")
         .sum()
     )
 
+    validation_result = {
+        "filename": str(
+            csv_file.resolve()
+        ),
+        "rows": int(
+            len(dataframe)
+        ),
+        "missing_columns": missing_columns,
+        "duplicate_handles": int(
+            duplicate_handles
+        ),
+        "duplicate_skus": int(
+            duplicate_skus
+        ),
+        "missing_titles": int(
+            missing_titles
+        ),
+        "missing_vendors": int(
+            missing_vendors
+        ),
+        "missing_prices": int(
+            missing_prices
+        ),
+        "missing_images": int(
+            missing_images
+        )
+    }
+
     if logger:
 
         logger("")
-        logger("Duplicate Handles : {}".format(duplicate_handles))
-        logger("Duplicate SKUs    : {}".format(duplicate_skus))
-        logger("Missing Titles    : {}".format(missing_titles))
-        logger("Missing Vendors   : {}".format(missing_vendor))
-        logger("Missing Prices    : {}".format(missing_prices))
-        logger("Missing Images    : {}".format(missing_images))
+        logger(
+            f"Duplicate Handles : {duplicate_handles}"
+        )
+        logger(
+            f"Duplicate SKUs    : {duplicate_skus}"
+        )
+        logger(
+            f"Missing Titles    : {missing_titles}"
+        )
+        logger(
+            f"Missing Vendors   : {missing_vendors}"
+        )
+        logger(
+            f"Missing Prices    : {missing_prices}"
+        )
+        logger(
+            f"Missing Images    : {missing_images}"
+        )
         logger("")
-        logger("Validation completed successfully.")
+        logger(
+            "Validation completed successfully."
+        )
 
-    return True
+    return validation_result
