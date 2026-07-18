@@ -1,0 +1,8 @@
+{
+    "store_url": "",
+    "output_folder": "output",
+    "image_folder": "images",
+    "csv_encoding": "utf-8-sig",
+    "open_output_after_export": false,
+    "confirm_exit": true
+}

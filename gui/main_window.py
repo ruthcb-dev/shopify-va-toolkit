@@ -1,16 +1,22 @@
-import tkinter as tk
-from tkinter import ttk, messagebox
+import os
+import subprocess
+import sys
 import threading
+import tkinter as tk
 
+from pathlib import Path
+from tkinter import messagebox, ttk
+
+from app_config.config_manager import ConfigManager
 from controllers.app_controller import AppController
 
-from gui.menu_bar import MenuBar
-from gui.settings_dialog import SettingsDialog
-from gui.toolbar import Toolbar
-from gui.product_panel import ProductPanel
 from gui.details_panel import DetailsPanel
 from gui.log_panel import LogPanel
+from gui.menu_bar import MenuBar
+from gui.product_panel import ProductPanel
+from gui.settings_dialog import SettingsDialog
 from gui.status_bar import StatusBar
+from gui.toolbar import Toolbar
 
 
 class MainWindow:
@@ -28,27 +34,54 @@ class MainWindow:
 
         # Root Grid
 
-        self.root.grid_rowconfigure(0, weight=0)
-        self.root.grid_rowconfigure(1, weight=1)
-        self.root.grid_rowconfigure(2, weight=0)
-        self.root.grid_rowconfigure(3, weight=0)
-        self.root.grid_columnconfigure(0, weight=1)
+        self.root.grid_rowconfigure(
+            0,
+            weight=0
+        )
+
+        self.root.grid_rowconfigure(
+            1,
+            weight=1
+        )
+
+        self.root.grid_rowconfigure(
+            2,
+            weight=0
+        )
+
+        self.root.grid_rowconfigure(
+            3,
+            weight=0
+        )
+
+        self.root.grid_columnconfigure(
+            0,
+            weight=1
+        )
 
         self.selected_product = None
 
-        # Settings are stored only during the current session.
-        # Permanent storage will be added in Phase 7.4.
+        # ==========================================================
+        # Configuration
+        # ==========================================================
 
-        self.settings = {
-            "store_url": "",
-            "output_folder": "output",
-            "image_folder": "images",
-            "csv_encoding": "utf-8-sig",
-            "open_output_after_export": False,
-            "confirm_exit": True
-        }
+        self.config_manager = ConfigManager()
+
+        self.settings = (
+            self.config_manager.load_settings()
+        )
+
+        self.ensure_settings_folders()
+
+        # ==========================================================
+        # Controller
+        # ==========================================================
 
         self.controller = AppController()
+
+        # ==========================================================
+        # Interface
+        # ==========================================================
 
         self.create_layout()
         self.create_menu_bar()
@@ -64,6 +97,10 @@ class MainWindow:
 
         self.log_panel.write(
             "Shopify VA Toolkit started."
+        )
+
+        self.log_panel.write(
+            "Settings loaded."
         )
 
         self.log_panel.write(
@@ -235,7 +272,7 @@ class MainWindow:
         self.root.mainloop()
 
     # ==========================================================
-    # Settings Dialog
+    # Settings
     # ==========================================================
 
     def show_settings(self):
@@ -248,17 +285,161 @@ class MainWindow:
 
     def apply_settings(self, updated_settings):
 
-        self.settings.update(
-            updated_settings
+        try:
+
+            self.settings = (
+                self.config_manager.update_settings(
+                    updated_settings
+                )
+            )
+
+            self.ensure_settings_folders()
+
+            self.log_panel.write(
+                "Application settings saved."
+            )
+
+            self.status_bar.set_status(
+                "Settings saved"
+            )
+
+        except OSError as error:
+
+            messagebox.showerror(
+                title="Settings Error",
+                message=(
+                    "The settings could not be saved.\n\n"
+                    f"{error}"
+                ),
+                parent=self.root
+            )
+
+            self.log_panel.write(
+                f"ERROR: Settings could not be saved: {error}"
+            )
+
+            self.status_bar.set_status(
+                "Settings error"
+            )
+
+    def ensure_settings_folders(self):
+
+        folder_keys = (
+            "output_folder",
+            "image_folder"
         )
 
-        self.log_panel.write(
-            "Application settings updated."
-        )
+        for key in folder_keys:
 
-        self.status_bar.set_status(
-            "Settings updated"
-        )
+            folder_value = self.settings.get(
+                key,
+                ""
+            )
+
+            if not folder_value:
+
+                continue
+
+            try:
+
+                Path(folder_value).expanduser().mkdir(
+                    parents=True,
+                    exist_ok=True
+                )
+
+            except OSError:
+
+                # Folder errors are handled later when the folder is used.
+                pass
+
+    # ==========================================================
+    # Open Folder
+    # ==========================================================
+
+    def open_folder(self, folder_path):
+
+        folder = Path(
+            folder_path
+        ).expanduser()
+
+        if not folder.exists():
+
+            folder.mkdir(
+                parents=True,
+                exist_ok=True
+            )
+
+        if sys.platform.startswith("win"):
+
+            os.startfile(
+                str(folder.resolve())
+            )
+
+        elif sys.platform == "darwin":
+
+            subprocess.Popen(
+                [
+                    "open",
+                    str(folder.resolve())
+                ]
+            )
+
+        else:
+
+            subprocess.Popen(
+                [
+                    "xdg-open",
+                    str(folder.resolve())
+                ]
+            )
+
+    def open_export_location(self, filename):
+
+        if not self.settings.get(
+            "open_output_after_export",
+            False
+        ):
+
+            return
+
+        if filename:
+
+            export_folder = (
+                Path(filename)
+                .expanduser()
+                .resolve()
+                .parent
+            )
+
+        else:
+
+            export_folder = self.settings.get(
+                "output_folder",
+                "output"
+            )
+
+        try:
+
+            self.open_folder(
+                export_folder
+            )
+
+            self.log_panel.write(
+                f"Opened output folder: {export_folder}"
+            )
+
+        except (
+            OSError,
+            subprocess.SubprocessError
+        ) as error:
+
+            self.log_panel.write(
+                f"ERROR: Could not open output folder: {error}"
+            )
+
+            self.status_bar.set_status(
+                "Could not open output folder"
+            )
 
     # ==========================================================
     # Exit Application
@@ -306,7 +487,7 @@ class MainWindow:
                 "• Generate Shopify-compatible CSV files\n"
                 "• Validate CSV files\n"
                 "• Export selected products\n"
-                "• Application settings\n\n"
+                "• Persistent application settings\n\n"
                 "Built with Python and Tkinter."
             ),
             parent=self.root
@@ -356,7 +537,9 @@ class MainWindow:
 
         try:
 
-            products = self.controller.fetch_products()
+            products = (
+                self.controller.fetch_products()
+            )
 
             self.root.after(
                 0,
@@ -439,23 +622,45 @@ class MainWindow:
             )
         )
 
+        self.root.after(
+            0,
+            lambda: self.log_panel.write(
+                "Starting image download..."
+            )
+        )
+
         try:
 
-            self.controller.download_product_images(
-                logger=lambda message:
-                self.root.after(
-                    0,
-                    lambda log_message=message:
-                    self.log_panel.write(
-                        log_message
+            image_folder = self.settings.get(
+                "image_folder",
+                "images"
+            )
+
+            downloaded_count = (
+                self.controller.download_images(
+                    output_folder=image_folder,
+                    logger=lambda message:
+                    self.root.after(
+                        0,
+                        lambda log_message=message:
+                        self.log_panel.write(
+                            log_message
+                        )
                     )
                 )
             )
 
             self.root.after(
                 0,
+                lambda: self.log_panel.write(
+                    f"Downloaded {downloaded_count} images."
+                )
+            )
+
+            self.root.after(
+                0,
                 lambda: self.status_bar.set_status(
-                    "Ready"
+                    f"{downloaded_count} images downloaded"
                 )
             )
 
@@ -474,7 +679,7 @@ class MainWindow:
             self.root.after(
                 0,
                 lambda: self.status_bar.set_status(
-                    "Error"
+                    "Image download failed"
                 )
             )
 
@@ -520,15 +725,36 @@ class MainWindow:
             )
         )
 
+        self.root.after(
+            0,
+            lambda: self.log_panel.write(
+                "Generating Shopify CSV..."
+            )
+        )
+
         try:
 
-            filename = self.controller.generate_csv(
-                logger=lambda message:
-                self.root.after(
-                    0,
-                    lambda log_message=message:
-                    self.log_panel.write(
-                        log_message
+            output_folder = self.settings.get(
+                "output_folder",
+                "output"
+            )
+
+            csv_encoding = self.settings.get(
+                "csv_encoding",
+                "utf-8-sig"
+            )
+
+            filename = (
+                self.controller.generate_csv(
+                    output_folder=output_folder,
+                    encoding=csv_encoding,
+                    logger=lambda message:
+                    self.root.after(
+                        0,
+                        lambda log_message=message:
+                        self.log_panel.write(
+                            log_message
+                        )
                     )
                 )
             )
@@ -538,7 +764,7 @@ class MainWindow:
                 self.root.after(
                     0,
                     lambda: self.log_panel.write(
-                        f"Saved to:\n{filename}"
+                        f"CSV generation completed.\n{filename}"
                     )
                 )
 
@@ -549,15 +775,13 @@ class MainWindow:
                     )
                 )
 
-                if self.settings.get(
-                    "open_output_after_export",
-                    False
-                ):
-
-                    self.log_panel.write(
-                        "Open output folder feature "
-                        "will be implemented in Phase 7.4."
+                self.root.after(
+                    0,
+                    lambda export_file=filename:
+                    self.open_export_location(
+                        export_file
                     )
+                )
 
             else:
 
@@ -583,7 +807,7 @@ class MainWindow:
             self.root.after(
                 0,
                 lambda: self.status_bar.set_status(
-                    "Error"
+                    "CSV generation failed"
                 )
             )
 
@@ -629,25 +853,34 @@ class MainWindow:
             )
         )
 
+        self.root.after(
+            0,
+            lambda: self.log_panel.write(
+                "Validating Shopify CSV..."
+            )
+        )
+
         try:
 
-            success = self.controller.validate_csv(
-                logger=lambda message:
-                self.root.after(
-                    0,
-                    lambda log_message=message:
-                    self.log_panel.write(
-                        log_message
+            validation_result = (
+                self.controller.validate_csv(
+                    logger=lambda message:
+                    self.root.after(
+                        0,
+                        lambda log_message=message:
+                        self.log_panel.write(
+                            log_message
+                        )
                     )
                 )
             )
 
-            if success:
+            if validation_result:
 
                 self.root.after(
                     0,
                     lambda: self.status_bar.set_status(
-                        "Validation completed"
+                        "CSV validation completed"
                     )
                 )
 
@@ -675,7 +908,7 @@ class MainWindow:
             self.root.after(
                 0,
                 lambda: self.status_bar.set_status(
-                    "Validation failed"
+                    "CSV validation failed"
                 )
             )
 
@@ -690,8 +923,9 @@ class MainWindow:
                 0,
                 lambda: self.toolbar.set_enabled(True)
             )
+
     # ==========================================================
-    # Export Selected
+    # Export Selected Products
     # ==========================================================
 
     def on_export_selected(self):
@@ -720,6 +954,13 @@ class MainWindow:
             )
         )
 
+        self.root.after(
+            0,
+            lambda: self.log_panel.write(
+                "Preparing selected products for export..."
+            )
+        )
+
         try:
 
             selected_products = (
@@ -732,9 +973,21 @@ class MainWindow:
                     "Please select one or more products first."
                 )
 
+            output_folder = self.settings.get(
+                "output_folder",
+                "output"
+            )
+
+            csv_encoding = self.settings.get(
+                "csv_encoding",
+                "utf-8-sig"
+            )
+
             filename = (
                 self.controller.export_selected_products(
-                    selected_products,
+                    selected_products=selected_products,
+                    output_folder=output_folder,
+                    encoding=csv_encoding,
                     logger=lambda message:
                     self.root.after(
                         0,
@@ -758,22 +1011,17 @@ class MainWindow:
                 self.root.after(
                     0,
                     lambda: self.status_bar.set_status(
-                        "Export completed"
+                        "Selected products exported"
                     )
                 )
 
-                if self.settings.get(
-                    "open_output_after_export",
-                    False
-                ):
-
-                    self.root.after(
-                        0,
-                        lambda: self.log_panel.write(
-                            "Open output folder feature "
-                            "will be implemented in Phase 7.4."
-                        )
+                self.root.after(
+                    0,
+                    lambda export_file=filename:
+                    self.open_export_location(
+                        export_file
                     )
+                )
 
             else:
 
@@ -823,8 +1071,13 @@ class MainWindow:
 
         self.selected_product = product
 
+        product_title = product.get(
+            "title",
+            "Untitled Product"
+        )
+
         self.log_panel.write(
-            f"Selected: {product.get('title', '-')}"
+            f"Selected product: {product_title}"
         )
 
         self.status_bar.set_status(
